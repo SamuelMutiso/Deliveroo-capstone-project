@@ -7,7 +7,7 @@ Full-stack parcel delivery management platform.
 You are a collaborator on this repository, so clone it. Do not fork it.
 
 ```bash
-git clone https://github.com/<owner>/deliveroo.git
+git clone https://github.com/SamuelMutiso/Deliveroo-capstone-project.git
 cd deliveroo
 ```
 
