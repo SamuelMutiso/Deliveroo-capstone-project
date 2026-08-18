@@ -1,0 +1,32 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+flask = "==3.0.3"
+flask-sqlalchemy = "==3.1.1"
+flask-migrate = "==4.0.7"
+flask-cors = "==4.0.1"
+flask-bcrypt = "==1.0.1"
+flask-jwt-extended = "==4.6.0"
+flask-mail = "==0.10.0"
+marshmallow = "==3.22.0"
+marshmallow-sqlalchemy = "==1.1.0"
+sqlalchemy = "==2.0.35"
+alembic = "==1.13.3"
+psycopg2-binary = "==2.9.12"
+python-dotenv = "==1.0.1"
+requests = "==2.32.3"
+gunicorn = "==23.0.0"
+
+[dev-packages]
+pytest = "==8.3.3"
+
+
+[scripts]
+start = "python wsgi.py"
+seed = "python seed.py"
+test = "pytest tests -q"
+migrate = "flask --app wsgi db migrate"
+upgrade = "flask --app wsgi db upgrade"
