@@ -1,8 +1,83 @@
 {
-  "users": [],
-  "orders": [],
-  "couriers": [],
-  "trackingEvents": [],
+  "users": [
+    {
+      "id": 1,
+      "name": "Peter Kamau",
+      "email": "peter@deliveroo.test",
+      "password": "123456",
+      "role": "customer"
+    },
+    {
+      "id": 2,
+      "name": "Brian Kamau",
+      "email": "courier@deliveroo.test",
+      "password": "123456",
+      "role": "courier",
+      "phone": "0712345678"
+    },
+    {
+      "id": 3,
+      "name": "Admin User",
+      "email": "admin@deliveroo.test",
+      "password": "123456",
+      "role": "admin"
+    }
+  ],
+  "orders": [
+    {
+      "id": 101,
+      "customer_id": 1,
+      "courier_id": 2,
+      "status": "assigned",
+      "pickup_address": "Westlands, Nairobi",
+      "destination_address": "Kilimani, Nairobi",
+      "description": "Documents",
+      "delivery_fee": 350,
+      "created_at": "2026-08-20T10:00:00Z"
+    }
+  ],
+  "couriers": [
+    {
+      "id": 2,
+      "user_id": 2,
+      "name": "Brian Kamau",
+      "phone": "0712345678",
+      "status": "available",
+      "availability": true,
+      "is_available": true,
+      "latitude": -1.2676,
+      "longitude": 36.8108
+    }
+  ],
+  "trackingEvents": [
+    {
+      "id": 1,
+      "order_id": 101,
+      "status": "Order placed",
+      "description": "Your delivery request has been received.",
+      "created_at": "2026-08-20T10:00:00Z"
+    },
+    {
+      "id": 2,
+      "order_id": 101,
+      "status": "Courier assigned",
+      "description": "Brian has been assigned to your delivery.",
+      "created_at": "2026-08-20T10:03:00Z"
+    }
+  ],
   "courierApplications": [],
-  "vehicleTypes": []
+  "vehicleTypes": [
+    {
+      "id": 1,
+      "name": "Motorcycle"
+    },
+    {
+      "id": 2,
+      "name": "Car"
+    },
+    {
+      "id": 3,
+      "name": "Bicycle"
+    }
+  ]
 }

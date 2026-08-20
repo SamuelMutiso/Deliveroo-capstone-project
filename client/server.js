@@ -1,4 +1,5 @@
 import express from "express";
+import cors from "cors";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -10,6 +11,14 @@ const DB_FILE = path.join(__dirname, "db.json");
 const PORT = 3001;
 
 const app = express();
+
+app.use(
+  cors({
+    origin: ["http://localhost:5173",
+          "http://127.0.0.1:5173",] ,
+    credentials: true,
+  }),
+);
 
 app.use(express.json());
 
@@ -920,6 +929,18 @@ app.get("/admin/stats", (req, res) => {
       (application) => application.status === "pending",
     ).length,
   });
+});
+
+app.get("/", (_req, res) => {
+  res.json({
+    message: "Deliveroo mock API is running",
+  });
+});
+
+app.get("/users", (_req, res) => {
+  const db = readDb();
+
+  res.json(db.users.map(publicUser));
 });
 
 /* =========================================================
