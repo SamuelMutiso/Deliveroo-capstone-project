@@ -23,11 +23,27 @@ app.use(
 app.use(express.json());
 
 function readDb() {
-  return JSON.parse(fs.readFileSync(DB_FILE, "utf8"));
+  const db = JSON.parse(fs.readFileSync(DB_FILE, "utf8"));
+
+  // The UI reads order.customer.name and order.courier.name, so attach the
+  // people here once rather than in every handler.
+  db.orders = db.orders.map((order) => ({
+    ...order,
+    customer: publicUser(db.users.find((user) => user.id === order.customer_id)),
+    courier: publicUser(db.users.find((user) => user.id === order.courier_id)),
+  }));
+
+  return db;
 }
 
 function writeDb(db) {
-  fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
+  // Strip the attached people again so they never get saved into the file.
+  const clean = {
+    ...db,
+    orders: db.orders.map(({ customer, courier, ...order }) => order),
+  };
+
+  fs.writeFileSync(DB_FILE, JSON.stringify(clean, null, 2));
 }
 
 function nextId(items) {
@@ -218,27 +234,45 @@ app.post("/auth/refresh", (req, res) => {
    CUSTOMER ORDERS
 ========================================================= */
 
+// The order form renders these as the weight bands, reading value, label,
+// description and max_kg. Keep those key names.
+const WEIGHT_BANDS = [
+  {
+    value: "light",
+    label: "Light",
+    description: "Documents and small packets",
+    max_kg: 2,
+    multiplier: 1.0,
+    handling_kes: 0,
+  },
+  {
+    value: "standard",
+    label: "Standard",
+    description: "Shoeboxes, electronics, clothing",
+    max_kg: 5,
+    multiplier: 1.35,
+    handling_kes: 60,
+  },
+  {
+    value: "heavy",
+    label: "Heavy",
+    description: "Appliances and bulk retail",
+    max_kg: 20,
+    multiplier: 1.9,
+    handling_kes: 180,
+  },
+  {
+    value: "bulk",
+    label: "Bulk",
+    description: "Furniture and pallet loads",
+    max_kg: 50,
+    multiplier: 2.6,
+    handling_kes: 420,
+  },
+];
+
 app.get("/orders/categories", (_req, res) => {
-  res.json({
-    categories: [
-      {
-        id: 1,
-        name: "Documents",
-      },
-      {
-        id: 2,
-        name: "Food",
-      },
-      {
-        id: 3,
-        name: "Packages",
-      },
-      {
-        id: 4,
-        name: "Other",
-      },
-    ],
-  });
+  res.json({ categories: WEIGHT_BANDS });
 });
 
 app.get("/orders/couriers", (_req, res) => {
@@ -249,19 +283,86 @@ app.get("/orders/couriers", (_req, res) => {
   });
 });
 
+function kilometresBetween(a, b) {
+  const R = 6371;
+  const toRad = (deg) => (deg * Math.PI) / 180;
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.sin(dLng / 2) ** 2 * Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat));
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+
+function buildQuote(distanceKm, categoryValue) {
+  const band =
+    WEIGHT_BANDS.find((item) => item.value === categoryValue) || WEIGHT_BANDS[1];
+
+  const base = 180;
+  const perKm = 42;
+  const distance = Math.round(distanceKm * 100) / 100;
+
+  const distanceCharge = Math.round(distance * perKm * 100) / 100;
+  const subtotal = base + distanceCharge;
+  const weightCharge = Math.round(subtotal * (band.multiplier - 1) * 100) / 100;
+  const longHaul =
+    distance > 25
+      ? Math.round((subtotal + weightCharge) * 0.12 * 100) / 100
+      : 0;
+
+  const total =
+    Math.round(
+      (base + distanceCharge + weightCharge + band.handling_kes + longHaul) / 10,
+    ) * 10;
+
+  const lines = [
+    { label: "Base fare", amount: base },
+    { label: `Distance (${distance} km)`, amount: distanceCharge },
+    { label: `${band.label} handling multiplier`, amount: weightCharge },
+    { label: "Handling fee", amount: band.handling_kes },
+  ];
+
+  if (longHaul) {
+    lines.push({ label: "Long haul surcharge", amount: longHaul });
+  }
+
+  return {
+    currency: "KES",
+    distance_km: distance,
+    category: band.value,
+    category_label: band.label,
+    lines,
+    total,
+  };
+}
+
+// The form expects { quote, route }, not a flat fee.
 app.post("/orders/quote", (req, res) => {
-  const distance = Number(req.body.distance || 5);
+  const {
+    pickup_lat: pickupLat,
+    pickup_lng: pickupLng,
+    destination_lat: destLat,
+    destination_lng: destLng,
+    weight_category: category,
+  } = req.body;
 
-  const baseFee = 150;
-  const perKm = 50;
+  const distance =
+    pickupLat != null && destLat != null
+      ? kilometresBetween(
+          { lat: Number(pickupLat), lng: Number(pickupLng) },
+          { lat: Number(destLat), lng: Number(destLng) },
+        )
+      : Number(req.body.distance || 5);
 
-  const deliveryFee = Math.round(baseFee + distance * perKm);
+  const quote = buildQuote(distance, category);
 
   res.json({
-    distance_km: distance,
-    delivery_fee: deliveryFee,
-    total: deliveryFee,
-    currency: "KES",
+    quote,
+    route: {
+      distance_km: quote.distance_km,
+      duration_min: Math.round(quote.distance_km * 2.4) + 8,
+      polyline: null,
+    },
   });
 });
 
@@ -306,16 +407,63 @@ app.post("/orders", (req, res) => {
     });
   }
 
+  const id = nextId(db.orders);
+
+  const distance =
+    req.body.pickup_lat != null && req.body.destination_lat != null
+      ? kilometresBetween(
+          {
+            lat: Number(req.body.pickup_lat),
+            lng: Number(req.body.pickup_lng),
+          },
+          {
+            lat: Number(req.body.destination_lat),
+            lng: Number(req.body.destination_lng),
+          },
+        )
+      : 5;
+
+  const quote = buildQuote(distance, req.body.weight_category);
+  const band =
+    WEIGHT_BANDS.find((item) => item.value === req.body.weight_category) ||
+    WEIGHT_BANDS[1];
+
+  const now = new Date().toISOString();
+
+  // Fill in everything the detail page reads, not just what the form sent.
   const order = {
-    id: nextId(db.orders),
+    ...req.body,
+    id,
+    tracking_code: `DLV-${String(id).padStart(3, "0")}${Math.random()
+      .toString(36)
+      .slice(2, 5)
+      .toUpperCase()}`,
     customer_id: user.id,
     courier_id: null,
     status: "pending",
-    created_at: new Date().toISOString(),
-    ...req.body,
+    weight_kg: band.max_kg,
+    distance_km: quote.distance_km,
+    duration_min: Math.round(quote.distance_km * 2.4) + 8,
+    price_kes: quote.total,
+    price_breakdown: quote,
+    payment_status: "unpaid",
+    is_editable: true,
+    is_cancellable: true,
+    current_lat: req.body.pickup_lat ?? null,
+    current_lng: req.body.pickup_lng ?? null,
+    created_at: now,
+    updated_at: now,
   };
 
   db.orders.unshift(order);
+
+  db.trackingEvents.push({
+    id: nextId(db.trackingEvents),
+    order_id: id,
+    status: "pending",
+    note: "Order created",
+    created_at: now,
+  });
 
   writeDb(db);
 
@@ -914,20 +1062,85 @@ app.get("/admin/stats", (req, res) => {
 
   if (!requireAdmin(req, res, db)) return;
 
+  const orders = db.orders;
+  const STATUSES = [
+    "pending",
+    "picked_up",
+    "in_transit",
+    "delivered",
+    "cancelled",
+  ];
+
+  const byStatus = {};
+  STATUSES.forEach((status) => {
+    byStatus[status] = orders.filter((order) => order.status === status).length;
+  });
+
+  const delivered = orders.filter((order) => order.status === "delivered");
+
+  // Last seven days of created against delivered.
+  const daily = [];
+  for (let offset = 6; offset >= 0; offset -= 1) {
+    const day = new Date();
+    day.setHours(0, 0, 0, 0);
+    day.setDate(day.getDate() - offset);
+    const key = day.toISOString().slice(0, 10);
+
+    daily.push({
+      date: key,
+      created: orders.filter((order) =>
+        String(order.created_at).startsWith(key),
+      ).length,
+      delivered: delivered.filter((order) =>
+        String(order.delivered_at || order.created_at).startsWith(key),
+      ).length,
+    });
+  }
+
+  const courierRows = db.users
+    .filter((user) => user.role === "courier")
+    .map((courier) => {
+      const assigned = orders.filter(
+        (order) => order.courier_id === courier.id,
+      );
+      const done = assigned.filter((order) => order.status === "delivered");
+
+      return {
+        id: courier.id,
+        name: courier.name,
+        assigned: assigned.length,
+        delivered: done.length,
+        completion_rate: assigned.length
+          ? Math.round((done.length / assigned.length) * 100)
+          : 0,
+        distance_km:
+          Math.round(
+            done.reduce((sum, order) => sum + (order.distance_km || 0), 0) * 10,
+          ) / 10,
+      };
+    })
+    .sort((a, b) => b.delivered - a.delivered);
+
   res.json({
-    total_orders: db.orders.length,
-    pending_orders: db.orders.filter((order) => order.status === "pending")
-      .length,
-    active_orders: db.orders.filter(
-      (order) => !["delivered", "cancelled"].includes(order.status),
-    ).length,
-    completed_orders: db.orders.filter((order) => order.status === "delivered")
-      .length,
-    total_users: db.users.length,
-    total_couriers: db.couriers.length,
-    pending_applications: db.courierApplications.filter(
-      (application) => application.status === "pending",
-    ).length,
+    totals: {
+      orders: orders.length,
+      active: orders.filter(
+        (order) => !["delivered", "cancelled"].includes(order.status),
+      ).length,
+      unassigned: orders.filter((order) => !order.courier_id).length,
+      delivered: delivered.length,
+      cancelled: byStatus.cancelled,
+      completed: delivered.length + byStatus.cancelled,
+      customers: db.users.filter((user) => user.role === "customer").length,
+      couriers: db.users.filter((user) => user.role === "courier").length,
+      revenue_kes: delivered.reduce(
+        (sum, order) => sum + (order.price_kes || 0),
+        0,
+      ),
+    },
+    by_status: byStatus,
+    daily,
+    couriers: courierRows,
   });
 });
 
