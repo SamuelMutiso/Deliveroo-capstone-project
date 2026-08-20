@@ -1,6 +1,7 @@
 import { Link, Navigate } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { useState } from 'react'
+import { Eye, EyeOff } from 'lucide-react'
 
 import Button from '@/components/ui/Button'
 import ErrorMessage from '@/components/ui/ErrorMessage'
@@ -10,19 +11,6 @@ import { clearAuthError, register, selectAuthError } from '@/features/auth/authS
 import { HOME_BY_ROLE, ROLES } from '@/utils/constants'
 import { isEmpty, validateRegister } from '@/utils/validators'
 import { useAuth } from '@/hooks/useAuth'
-
-const ROLE_CHOICES = [
-  {
-    value: ROLES.CUSTOMER,
-    title: 'I send parcels',
-    body: 'Create deliveries, track them and pay with M-Pesa.',
-  },
-  {
-    value: ROLES.COURIER,
-    title: 'I deliver parcels',
-    body: 'Pick up assigned runs and update progress on the road.',
-  },
-]
 
 export default function Register() {
   const dispatch = useDispatch()
@@ -38,6 +26,10 @@ export default function Register() {
     role: ROLES.CUSTOMER,
   })
   const [errors, setErrors] = useState({})
+
+  // States to track password visibility
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
   if (isAuthenticated) {
     return <Navigate to={HOME_BY_ROLE[role] || '/dashboard'} replace />
@@ -68,51 +60,19 @@ export default function Register() {
   return (
     <PageContainer className="max-w-xl">
       <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-inset ring-slate-100 sm:p-8">
-        <h1 className="font-display text-3xl font-bold tracking-tight text-slate-950">
-          Create your account
-        </h1>
-        <p className="mt-1.5 font-body text-base text-slate-500">
-          It takes a minute. You can start sending parcels straight away.
-        </p>
+        
+        <div className="text-center">
+          <h1 className="font-display text-3xl font-bold tracking-tight text-slate-950">
+            Create your account
+          </h1>
+          <p className="mt-1.5 font-body text-base text-slate-500">
+            It takes a minute. 
+            You can start sending parcels straight away.
+          </p>
+        </div>
 
         <form onSubmit={handleSubmit} noValidate className="mt-8 flex flex-col gap-3.5">
           {serverError && <ErrorMessage compact message={serverError} />}
-
-          <fieldset>
-            <legend className="font-body text-sm font-semibold text-slate-700">
-              How will you use Deliveroo?
-            </legend>
-            <div className="mt-2.5 grid gap-2.5 sm:grid-cols-2">
-              {ROLE_CHOICES.map((choice) => {
-                const active = values.role === choice.value
-                return (
-                  <label
-                    key={choice.value}
-                    className={[
-                      'flex cursor-pointer flex-col gap-0.5 rounded-xl p-3.5 transition',
-                      'ring-1 ring-inset focus-within:ring-2 focus-within:ring-brand-500',
-                      active ? 'bg-brand-50 ring-brand-500' : 'bg-white ring-slate-200 hover:ring-slate-300',
-                    ].join(' ')}
-                  >
-                    <span className="flex items-center justify-between gap-2.5">
-                      <span className="font-display text-base font-semibold text-slate-900">
-                        {choice.title}
-                      </span>
-                      <input
-                        type="radio"
-                        name="role"
-                        value={choice.value}
-                        checked={active}
-                        onChange={() => set({ role: choice.value })}
-                        className="h-4 w-4 accent-brand-600"
-                      />
-                    </span>
-                    <span className="font-body text-sm text-slate-500">{choice.body}</span>
-                  </label>
-                )
-              })}
-            </div>
-          </fieldset>
 
           <Input
             label="Full name"
@@ -143,23 +103,44 @@ export default function Register() {
           />
 
           <div className="grid gap-3.5 sm:grid-cols-2">
-            <Input
-              label="Password"
-              type="password"
-              autoComplete="new-password"
-              value={values.password}
-              onChange={(event) => set({ password: event.target.value })}
-              error={errors.password}
-              hint="At least 8 characters"
-            />
-            <Input
-              label="Confirm password"
-              type="password"
-              autoComplete="new-password"
-              value={values.confirmPassword}
-              onChange={(event) => set({ confirmPassword: event.target.value })}
-              error={errors.confirmPassword}
-            />
+            <div className="relative">
+              <Input
+                label="Password"
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="new-password"
+                value={values.password}
+                onChange={(event) => set({ password: event.target.value })}
+                error={errors.password}
+                hint="At least 8 characters"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                className="absolute right-3 top-[38px] text-slate-400 hover:text-slate-600 focus:outline-none"
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+
+            <div className="relative">
+              <Input
+                label="Confirm password"
+                type={showConfirmPassword ? 'text' : 'password'}
+                autoComplete="new-password"
+                value={values.confirmPassword}
+                onChange={(event) => set({ confirmPassword: event.target.value })}
+                error={errors.confirmPassword}
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword((prev) => !prev)}
+                className="absolute right-3 top-[38px] text-slate-400 hover:text-slate-600 focus:outline-none"
+                tabIndex={-1}
+              >
+                {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
           </div>
 
           <Button type="submit" size="lg" fullWidth loading={submitting}>
@@ -167,7 +148,7 @@ export default function Register() {
           </Button>
         </form>
 
-        <p className="mt-6 font-body text-sm text-slate-500">
+        <p className="mt-6 text-center font-body text-sm text-slate-500">
           Already registered?{' '}
           <Link to="/login" className="font-semibold text-brand-700 underline-offset-4 hover:underline">
             Sign in instead
