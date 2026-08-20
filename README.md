@@ -8,7 +8,7 @@ Moringa School Module 6 capstone — CodeMaestros.
 
 | Name | Area |
 | --- | --- |
-| Samuel Mutiso | Scrum Master · API layer and Redux store |
+| Samuel Mutiso |· API layer and Redux store |
 | David | Component library and shared hooks |
 | Alexander | Auth, profile and the admin area |
 | Michelle | Layout shell, public site and rider screens |
