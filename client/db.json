@@ -90,7 +90,7 @@
     {
       "id": 8,
       "name": "Amina Wanjiru",
-      "email": "amina@deliveroo.co.ke",
+      "email": "amina.wanjiru@gmail.com",
       "phone": "0712345601",
       "password": "customer1234",
       "role": "customer",
@@ -99,7 +99,7 @@
     {
       "id": 9,
       "name": "Brian Otieno",
-      "email": "brian@deliveroo.co.ke",
+      "email": "brian.otieno@gmail.com",
       "phone": "0712345602",
       "password": "customer1234",
       "role": "customer",
@@ -108,7 +108,7 @@
     {
       "id": 10,
       "name": "Cynthia Mwikali",
-      "email": "cynthia@deliveroo.co.ke",
+      "email": "cynthia.mwikali@yahoo.com",
       "phone": "0712345603",
       "password": "customer1234",
       "role": "customer",
@@ -117,7 +117,7 @@
     {
       "id": 11,
       "name": "Dennis Kiprotich",
-      "email": "dennis@deliveroo.co.ke",
+      "email": "dennis.kiprotich@gmail.com",
       "phone": "0712345604",
       "password": "customer1234",
       "role": "customer",
@@ -126,7 +126,7 @@
     {
       "id": 12,
       "name": "Faith Njoki",
-      "email": "faith@deliveroo.co.ke",
+      "email": "faith.njoki@outlook.com",
       "phone": "0712345605",
       "password": "customer1234",
       "role": "customer",
@@ -135,7 +135,7 @@
     {
       "id": 13,
       "name": "George Wekesa",
-      "email": "george@deliveroo.co.ke",
+      "email": "george.wekesa@gmail.com",
       "phone": "0712345606",
       "password": "customer1234",
       "role": "customer",
@@ -144,7 +144,7 @@
     {
       "id": 14,
       "name": "Hellen Auma",
-      "email": "hellen@deliveroo.co.ke",
+      "email": "hellen.auma@gmail.com",
       "phone": "0712345607",
       "password": "customer1234",
       "role": "customer",
@@ -153,7 +153,7 @@
     {
       "id": 15,
       "name": "Isaac Muriuki",
-      "email": "isaac@deliveroo.co.ke",
+      "email": "isaac.muriuki@yahoo.com",
       "phone": "0712345608",
       "password": "customer1234",
       "role": "customer",
@@ -214,24 +214,6 @@
       "current_lng": 36.8028,
       "created_at": "2026-08-20T17:25:13.911Z",
       "updated_at": "2026-08-20T17:25:13.911Z"
-    },
-    {
-      "id": 134,
-      "customer_id": 8,
-      "courier_id": null,
-      "status": "pending",
-      "created_at": "2026-08-20T17:23:28.621Z",
-      "pickup_address": "Sarit Centre, Westlands",
-      "pickup_lat": -1.2626,
-      "pickup_lng": 36.8028,
-      "destination_address": "Karen Shopping Centre",
-      "destination_lat": -1.3191,
-      "destination_lng": 36.7118,
-      "weight_category": "standard",
-      "recipient_name": "Lydia Akinyi",
-      "recipient_phone": "0712345678",
-      "recipient_email": null,
-      "notes": null
     },
     {
       "id": 101,
@@ -2074,7 +2056,7 @@
       "phone": "0722100001",
       "vehicle": "Motorbike KMFA 221P",
       "is_available": true,
-      "availability": "available",
+      "availability": true,
       "active_orders": 0
     },
     {

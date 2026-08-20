@@ -553,23 +553,20 @@ app.get("/courier/orders", (req, res) => {
     });
   }
 
-  const courier = db.couriers.find((item) => item.user_id === user.id);
+  let orders = db.orders.filter((order) => order.courier_id === user.id);
 
-  if (!courier) {
-    return res.json({
-      items: [],
-      meta: {
-        page: 1,
-        per_page: 10,
-        total: 0,
-        pages: 0,
-        has_next: false,
-        has_prev: false,
-      },
-    });
+  if (req.query.status) {
+    orders = orders.filter((order) => order.status === req.query.status);
   }
 
-  const orders = db.orders.filter((order) => order.courier_id === courier.id);
+  if (req.query.search) {
+    const search = String(req.query.search).toLowerCase();
+    orders = orders.filter((order) =>
+      JSON.stringify(order).toLowerCase().includes(search)
+    );
+  }
+
+  orders.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
   res.json(pagination(orders, req));
 });
@@ -655,21 +652,31 @@ app.patch("/courier/availability", (req, res) => {
     });
   }
 
-  const courier = db.couriers.find((item) => item.user_id === user.id);
-
-  if (!courier) {
-    return res.status(404).json({
-      message: "Courier profile not found.",
+  if (user.role !== "courier") {
+    return res.status(403).json({
+      message: "Only riders have a duty status.",
     });
   }
 
-  courier.is_available = Boolean(req.body.is_available);
-  courier.availability = courier.is_available;
+  const isAvailable = Boolean(req.body.is_available);
+
+  const stored = db.users.find((item) => item.id === user.id);
+  stored.is_available = isAvailable;
+  stored.last_seen_at = new Date().toISOString();
+
+  const courier = db.couriers.find((item) => item.user_id === user.id);
+
+  if (courier) {
+    courier.is_available = isAvailable;
+    courier.availability = isAvailable;
+  }
 
   writeDb(db);
 
   res.json({
-    courier,
+    is_available: isAvailable,
+    courier: courier || null,
+    user: publicUser(stored),
   });
 });
 
@@ -677,22 +684,32 @@ app.get("/courier/stats", (req, res) => {
   const db = readDb();
   const user = getUserFromRequest(req, db);
 
-  const courier = db.couriers.find((item) => item.user_id === user?.id);
+  if (!user) {
+    return res.status(401).json({
+      message: "Not authenticated.",
+    });
+  }
 
-  const orders = courier
-    ? db.orders.filter((order) => order.courier_id === courier.id)
-    : [];
+  const orders = db.orders.filter((order) => order.courier_id === user.id);
+  const delivered = orders.filter((order) => order.status === "delivered");
+
+  const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+
+  const deliveredThisWeek = delivered.filter((order) => {
+    const stamp = order.delivered_at || order.updated_at || order.created_at;
+    return stamp ? new Date(stamp).getTime() >= weekAgo : false;
+  });
 
   res.json({
-    total_orders: orders.length,
-    completed_orders: orders.filter((order) => order.status === "delivered")
-      .length,
-    active_orders: orders.filter(
-      (order) => !["delivered", "cancelled"].includes(order.status),
+    active: orders.filter(
+      (order) => !["delivered", "cancelled"].includes(order.status)
     ).length,
-    earnings: orders
-      .filter((order) => order.status === "delivered")
-      .reduce((sum, order) => sum + Number(order.delivery_fee || 0), 0),
+    delivered: delivered.length,
+    delivered_this_week: deliveredThisWeek.length,
+    distance_km: Number(
+      delivered.reduce((sum, order) => sum + (order.distance_km || 0), 0).toFixed(1)
+    ),
+    total_orders: orders.length,
   });
 });
 
@@ -953,8 +970,49 @@ app.get("/admin/users/:id", (req, res) => {
     });
   }
 
+  const placed = db.orders.filter((order) => order.customer_id === user.id);
+  const carried = db.orders.filter((order) => order.courier_id === user.id);
+
+  const countByStatus = (rows) =>
+    rows.reduce((acc, row) => {
+      acc[row.status] = (acc[row.status] || 0) + 1;
+      return acc;
+    }, { pending: 0, picked_up: 0, in_transit: 0, delivered: 0, cancelled: 0 });
+
+  const application =
+    (db.courierApplications || []).find(
+      (item) => item.applicant_id === user.id || item.courier_id === user.id
+    ) || null;
+
+  const recent = [...placed, ...carried]
+    .filter((order, index, rows) => rows.findIndex((o) => o.id === order.id) === index)
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    .slice(0, 5);
+
   res.json({
     user: publicUser(user),
+    activity: {
+      placed: placed.length,
+      placed_by_status: countByStatus(placed),
+      spent_kes: placed
+        .filter((order) => order.status === "delivered")
+        .reduce((sum, order) => sum + (order.price_kes || 0), 0),
+      carried: carried.length,
+      carried_by_status: countByStatus(carried),
+      distance_km: Number(
+        carried
+          .filter((order) => order.status === "delivered")
+          .reduce((sum, order) => sum + (order.distance_km || 0), 0)
+          .toFixed(1)
+      ),
+    },
+    application: application
+      ? {
+          ...application,
+          vehicle_label: application.vehicle_type,
+        }
+      : null,
+    recent_orders: recent,
   });
 });
 
@@ -1154,6 +1212,146 @@ app.get("/users", (_req, res) => {
   const db = readDb();
 
   res.json(db.users.map(publicUser));
+});
+
+/* =========================================================
+   PAYMENTS
+========================================================= */
+
+const SETTLE_AFTER_MS = 6000;
+
+function findPayment(db, orderId) {
+  return (db.payments || []).find((item) => item.order_id === orderId) || null;
+}
+
+function settlePayment(orderId) {
+  setTimeout(() => {
+    const db = readDb();
+    const payment = findPayment(db, orderId);
+
+    if (!payment || payment.status !== "processing") return;
+
+    payment.status = "paid";
+    payment.mpesa_receipt =
+      "SIM" + String(orderId).padStart(3, "0") + Math.random().toString(36).slice(2, 6).toUpperCase();
+    payment.result_description = "The service request is processed successfully.";
+    payment.paid_at = new Date().toISOString();
+    payment.updated_at = payment.paid_at;
+
+    const order = db.orders.find((item) => item.id === orderId);
+    if (order) order.payment_status = "paid";
+
+    writeDb(db);
+  }, SETTLE_AFTER_MS);
+}
+
+app.get("/payments/:orderId", (req, res) => {
+  const db = readDb();
+  const user = getUserFromRequest(req, db);
+
+  if (!user) return res.status(401).json({ message: "Sign in to continue." });
+
+  const orderId = Number(req.params.orderId);
+  const order = db.orders.find((item) => item.id === orderId);
+
+  if (!order) return res.status(404).json({ message: "Order not found." });
+
+  if (user.role !== "admin" && order.customer_id !== user.id) {
+    return res.status(403).json({ message: "This is not your order." });
+  }
+
+  res.json({
+    payment: findPayment(db, orderId),
+    amount_due_kes: order.payment_status === "paid" ? 0 : order.price_kes,
+  });
+});
+
+app.post("/payments/:orderId/mpesa", (req, res) => {
+  const db = readDb();
+  const user = getUserFromRequest(req, db);
+
+  if (!user) return res.status(401).json({ message: "Sign in to continue." });
+
+  const orderId = Number(req.params.orderId);
+  const order = db.orders.find((item) => item.id === orderId);
+
+  if (!order) return res.status(404).json({ message: "Order not found." });
+
+  if (user.role !== "admin" && order.customer_id !== user.id) {
+    return res.status(403).json({ message: "This is not your order." });
+  }
+
+  if (order.payment_status === "paid") {
+    return res.status(400).json({ message: "This delivery is already paid for." });
+  }
+
+  const phone = (req.body && req.body.phone) || user.phone;
+
+  if (!phone) {
+    return res.status(400).json({ message: "A phone number is required." });
+  }
+
+  db.payments = db.payments || [];
+
+  let payment = findPayment(db, orderId);
+  const now = new Date().toISOString();
+
+  if (!payment) {
+    payment = {
+      id: db.payments.length + 1,
+      order_id: orderId,
+      amount_kes: order.price_kes,
+      method: "mpesa",
+      created_at: now,
+    };
+    db.payments.push(payment);
+  }
+
+  payment.status = "processing";
+  payment.phone = phone;
+  payment.checkout_request_id = "ws_CO_SIM_" + orderId + "_" + Date.now();
+  payment.merchant_request_id = "SIM-" + orderId;
+  payment.mpesa_receipt = null;
+  payment.result_description = "Awaiting the PIN prompt on the customer handset.";
+  payment.simulated = true;
+  payment.updated_at = now;
+
+  order.payment_status = "processing";
+
+  writeDb(db);
+  settlePayment(orderId);
+
+  res.status(201).json({
+    payment,
+    message: "Check your phone to authorise the payment.",
+  });
+});
+
+app.post("/auth/change-password", (req, res) => {
+  const db = readDb();
+  const user = getUserFromRequest(req, db);
+
+  if (!user) return res.status(401).json({ message: "Sign in to continue." });
+
+  const { current_password: current, new_password: next } = req.body || {};
+
+  if (!current || !next) {
+    return res.status(400).json({ message: "Both passwords are required." });
+  }
+
+  if (user.password !== current) {
+    return res.status(400).json({ message: "Your current password is not correct." });
+  }
+
+  if (String(next).length < 8) {
+    return res.status(400).json({ message: "Use at least 8 characters." });
+  }
+
+  const stored = db.users.find((item) => item.id === user.id);
+  stored.password = next;
+  writeDb(db);
+
+  res.json({ message: "Password changed." });
 });
 
 /* =========================================================
