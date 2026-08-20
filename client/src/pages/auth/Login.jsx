@@ -1,6 +1,7 @@
 import { Link, Navigate, useLocation } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { useState } from 'react'
+import { Eye, EyeOff } from 'lucide-react'
 
 import Button from '@/components/ui/Button'
 import ErrorMessage from '@/components/ui/ErrorMessage'
@@ -11,7 +12,6 @@ import { isEmpty, validateLogin } from '@/utils/validators'
 import { useAuth } from '@/hooks/useAuth'
 import { HOME_BY_ROLE } from '@/utils/constants'
 
-
 export default function Login() {
   const dispatch = useDispatch()
   const location = useLocation()
@@ -20,6 +20,7 @@ export default function Login() {
 
   const [values, setValues] = useState({ email: '', password: '' })
   const [errors, setErrors] = useState({})
+  const [showPassword, setShowPassword] = useState(false)
 
   if (isAuthenticated) {
     return <Navigate to={location.state?.from || HOME_BY_ROLE[role] || '/dashboard'} replace />
@@ -40,12 +41,16 @@ export default function Login() {
   return (
     <PageContainer className="max-w-lg">
       <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-inset ring-slate-100 sm:p-8">
-        <h1 className="font-display text-3xl font-bold tracking-tight text-slate-950">
-          Welcome back
-        </h1>
-        <p className="mt-1.5 font-body text-base text-slate-500">
-          Sign in to track parcels, run your route or manage the board.
-        </p>
+        
+        {/* Centered Header Section */}
+        <div className="text-center">
+          <h1 className="font-display text-3xl font-bold tracking-tight text-slate-950">
+            Welcome back
+          </h1>
+          <p className="mt-1.5 font-body text-base text-slate-500">
+            Sign in to your account.
+          </p>
+        </div>
 
         <form onSubmit={handleSubmit} noValidate className="mt-8 flex flex-col gap-3.5">
           {serverError && <ErrorMessage compact message={serverError} />}
@@ -59,29 +64,39 @@ export default function Login() {
             error={errors.email}
             placeholder="you@example.com"
           />
-          <Input
-            label="Password"
-            type="password"
-            autoComplete="current-password"
-            value={values.password}
-            onChange={(event) => set({ password: event.target.value })}
-            error={errors.password}
-            placeholder="••••••••"
-          />
+
+          <div className="relative">
+            <Input
+              label="Password"
+              type={showPassword ? 'text' : 'password'}
+              autoComplete="current-password"
+              value={values.password}
+              onChange={(event) => set({ password: event.target.value })}
+              error={errors.password}
+              placeholder="••••••••"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((prev) => !prev)}
+              className="absolute right-3 top-[38px] text-slate-400 hover:text-slate-600 focus:outline-none"
+              tabIndex={-1}
+            >
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
 
           <Button type="submit" size="lg" fullWidth loading={submitting}>
             Sign in
           </Button>
         </form>
 
-        <p className="mt-6 font-body text-sm text-slate-500">
+        <p className="mt-6 text-center font-body text-sm text-slate-500">
           New here?{' '}
           <Link to="/register" className="font-semibold text-brand-700 underline-offset-4 hover:underline">
             Create an account
           </Link>
         </p>
       </div>
-
     </PageContainer>
   )
 }
