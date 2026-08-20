@@ -539,7 +539,7 @@ export default function Landing() {
             <h2 className="mt-1.5 font-display text-3xl font-bold tracking-tight text-slate-950 sm:text-5xl">
               Three steps.
               <br />
-              That's it.
+              That’s it.
             </h2>
           </Reveal>
 
@@ -582,7 +582,7 @@ export default function Landing() {
             <p className="mx-auto mt-3 max-w-xs font-body text-sm leading-5 text-slate-300">
               Give it a destination.
               <br />
-              We'll take care of the journey.
+              We’ll take care of the journey.
             </p>
 
             <div className="mt-6">
