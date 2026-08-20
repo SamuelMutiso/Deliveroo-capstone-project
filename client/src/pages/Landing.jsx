@@ -374,8 +374,15 @@ export default function Landing() {
     <main className="overflow-hidden bg-white text-slate-950">
       <header className="absolute inset-x-0 top-0 z-50">
         <PageContainer className="flex items-center justify-between py-4">
-          <Link to="/" className="font-display text-2xl font-bold tracking-[-0.06em] text-white">
-            Deliveroo
+          <Link to="/" className="flex items-center gap-2.5" aria-label="Deliveroo home">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-400 shadow-inner">
+              <svg viewBox="0 0 32 32" className="h-5 w-5 text-brand-950" fill="none" aria-hidden="true">
+                <path d="M8 21 14 9l4 7.5L20 13l4 8z" fill="currentColor" />
+              </svg>
+            </span>
+            <span className="font-display text-2xl font-bold tracking-[-0.06em] text-white">
+              Deliveroo
+            </span>
           </Link>
 
           <nav className="hidden items-center rounded-full bg-white/90 px-1.5 py-1.5 shadow-sm ring-1 ring-black/5 backdrop-blur md:flex">
@@ -388,6 +395,12 @@ export default function Landing() {
             <a href="#how" className="px-4 py-1.5 font-body text-sm font-medium">
               How it works
             </a>
+            <Link to="/about" className="px-4 py-1.5 font-body text-sm font-medium">
+              About us
+            </Link>
+            <Link to="/services" className="px-4 py-1.5 font-body text-sm font-medium">
+              Services
+            </Link>
           </nav>
 
           <div className="flex items-center gap-2">
@@ -581,11 +594,22 @@ export default function Landing() {
         </PageContainer>
       </section>
 
-      <footer className="bg-slate-950 py-5 text-white">
-        <PageContainer className="flex items-center justify-between">
+      <footer className="bg-slate-950 py-6 text-white">
+        <PageContainer className="flex flex-col items-center justify-between gap-3 sm:flex-row">
           <Link to="/" className="font-display text-xl font-bold tracking-[-0.05em]">
             Deliveroo
           </Link>
+          <nav className="flex items-center gap-5">
+            <Link to="/about" className="py-1.5 font-body text-xs text-white/60 transition hover:text-white">
+              About us
+            </Link>
+            <Link to="/services" className="py-1.5 font-body text-xs text-white/60 transition hover:text-white">
+              Services
+            </Link>
+            <Link to="/login" className="py-1.5 font-body text-xs text-white/60 transition hover:text-white">
+              Sign in
+            </Link>
+          </nav>
           <p className="font-body text-[9px] text-white/30">Nairobi · parcel delivery</p>
         </PageContainer>
       </footer>
