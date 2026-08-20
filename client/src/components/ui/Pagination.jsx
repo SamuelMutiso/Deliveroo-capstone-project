@@ -62,4 +62,3 @@ function PageButton({ active, disabled, onClick, children }) {
 
 function Ellipsis() {
   return <span className="px-1.5 font-body text-sm text-slate-400">…</span>
-}
