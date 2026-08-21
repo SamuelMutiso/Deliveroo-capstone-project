@@ -16,7 +16,7 @@ Moringa School Module 6 capstone — CodeMaestros.
 
 ## Status
 
-Frontend is complete and runs against a mock API committed in `client/`. The Flask backend starts in Week 2 — when it lands, `client/server.js` and `client/db.json` are deleted and `.env` points at Flask. No React code changes, because the mock serves the same routes and the same JSON shapes the real API will.
+Frontend is complete and was presented against a temporary mock API, which has now been removed. The Flask backend is in progress. No React code changed during the switch — the mock served the same routes and the same JSON shapes the real API does, so removing it was pure deletion.
 
 ## Stack
 
@@ -35,13 +35,17 @@ Frontend is complete and runs against a mock API committed in `client/`. The Fla
 
 ## Running it
 
-You need Node 18 or newer. **Two terminals, both inside `client/`.**
+You need Node 18 or newer and Python 3.11 or newer. **Two terminals.**
 
 Terminal 1 — the API:
 
 ```bash
-cd client
-node server.js
+cd server
+pipenv install --dev
+cp .env.example .env
+pipenv run upgrade
+pipenv run seed
+pipenv run start
 ```
 
 Terminal 2 — the app:
@@ -53,19 +57,15 @@ cp .env.example .env
 npm run dev
 ```
 
-The app opens on http://localhost:5173 and the API runs on http://localhost:3001.
+The app opens on http://localhost:5173 and the API on http://localhost:5555.
 
-`npm install` and `cp .env.example .env` are only needed the first time.
+The install, migrate and seed steps are only needed the first time.
 
 **Vite only reads `.env` at startup.** Edit it and you must restart `npm run dev`.
 
 ## Signing in
 
-| Role | Email | Password |
-| --- | --- | --- |
-| Admin | admin@deliveroo.co.ke | admin1234 |
-| Rider | samuel@deliveroo.co.ke | courier1234 |
-| Customer | amina.wanjiru@gmail.com | customer1234 |
+Accounts come from the database seed. Run `pipenv run seed` and use the credentials it prints.
 
 Riders sign in with a company address because rider accounts are issued by operations, not self-registered. Customers sign up themselves.
 
@@ -84,7 +84,7 @@ Screens that show a changing status re-fetch every 8 seconds, so a customer watc
 `client/.env`:
 
 ```
-VITE_API_BASE_URL=http://localhost:3001
+VITE_API_BASE_URL=http://localhost:5555/api
 VITE_GOOGLE_MAPS_API_KEY=
 ```
 
@@ -96,8 +96,6 @@ Never commit `.env`. It is gitignored, and it stays that way.
 
 ```
 client/
-  server.js       mock API — deleted when Flask lands
-  db.json         mock data — deleted when Flask lands
   src/
     api/          axios instance and one module per backend area
     app/          redux store
@@ -107,7 +105,15 @@ client/
     routes/       route table and the auth and role guards
     hooks/        useAuth, useToast, useDebounce, useLivePoll, useLiveLocation
     utils/        constants, formatters, validators, media
-server/           Flask API — Week 2
+server/
+  app/
+    models/       SQLAlchemy models
+    resources/    route handlers by area
+    schemas/      Marshmallow serialisation
+    services/     pricing, maps, m-pesa, notifications
+    utils/        decorators, pagination, errors
+  migrations/     Alembic
+  seed.py
 ```
 
 Pages never call axios directly. A page dispatches a thunk, the slice calls a module in `api/`, and the page reads the result with a selector.
@@ -148,10 +154,10 @@ Commit, push, then open a pull request **into `development`**. Pushing your bran
 
 ## When something breaks
 
-**"Cannot reach the server. Is the API running?"** — Terminal 1 is not running. `cd client && node server.js`.
+**"Cannot reach the server. Is the API running?"** — Terminal 1 is not running. `cd server && pipenv run start`.
 
 **Changes to `.env` do nothing** — restart the dev server.
 
-**Port 3001 already in use** — the API is already running in another terminal.
+**Port 5555 already in use** — the API is already running in another terminal. On macOS, AirPlay Receiver also uses 5000, which is why the API sits on 5555.
 
 **A blank page after pulling** — run `npm install`, then `rm -rf node_modules/.vite` and start again.
