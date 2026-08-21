@@ -12,6 +12,7 @@ import CourierDashboard from "@/pages/courier/CourierDashboard";
 import CourierOrderDetail from "@/pages/courier/CourierOrderDetail";
 import CustomerDashboard from "@/pages/customer/CustomerDashboard";
 import Login from "@/pages/auth/Login";
+import ForgotPassword from "@/pages/auth/ForgotPassword";
 import NewOrder from "@/pages/customer/NewOrder";
 import NotFound from "@/pages/NotFound";
 import OrderDetail from "@/pages/customer/OrderDetail";
@@ -27,8 +28,11 @@ export default function AppRoutes() {
     <Routes>
       <Route path="/about" element={<About />} />
       <Route path="/services" element={<Services />} />
+
+      {/* Authentication */}
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
 
       <Route element={<ProtectedRoute />}>
         <Route path="/profile" element={<Profile />} />
