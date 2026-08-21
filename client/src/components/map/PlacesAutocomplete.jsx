@@ -21,19 +21,13 @@ export default function PlacesAutocomplete({
   const debounceRef = useRef(null);
   const abortRef = useRef(null);
 
-  /*
-   * Keep the input synchronized when the parent changes
-   * the selected location externally.
-   */
   useEffect(() => {
-    if (value?.address !== undefined && value.address !== query) {
-      setQuery(value.address || "");
-    }
+    if (value?.address === undefined) return;
+    setQuery((current) =>
+      value.address !== current ? value.address || "" : current,
+    );
   }, [value?.address]);
 
-  /*
-   * Clean up timers and requests when component unmounts.
-   */
   useEffect(() => {
     return () => {
       if (debounceRef.current) {
@@ -53,9 +47,6 @@ export default function PlacesAutocomplete({
       return;
     }
 
-    /*
-     * Cancel the previous search request.
-     */
     abortRef.current?.abort();
 
     const controller = new AbortController();
@@ -68,33 +59,16 @@ export default function PlacesAutocomplete({
 
       url.searchParams.set("q", trimmed);
 
-      /*
-       * Ask Nominatim for proper address information.
-       */
       url.searchParams.set("format", "json");
 
       url.searchParams.set("addressdetails", "1");
 
-      /*
-       * Search only inside the Nairobi area.
-       */
       url.searchParams.set("viewbox", NAIROBI_VIEWBOX);
 
-      /*
-       * Prefer results inside the viewbox.
-       */
       url.searchParams.set("bounded", "1");
 
-      /*
-       * Return several useful result types:
-       * buildings, roads, shops, hospitals,
-       * malls, landmarks, etc.
-       */
       url.searchParams.set("limit", "8");
 
-      /*
-       * Restrict results to Kenya.
-       */
       url.searchParams.set("countrycodes", "ke");
 
       const response = await fetch(url, {
@@ -152,9 +126,6 @@ export default function PlacesAutocomplete({
       return;
     }
 
-    /*
-     * Wait until the user stops typing before searching.
-     */
     debounceRef.current = setTimeout(() => {
       searchPlaces(nextQuery);
     }, 500);
@@ -173,10 +144,6 @@ export default function PlacesAutocomplete({
       return;
     }
 
-    /*
-     * Nominatim's display_name is already a nicely
-     * formatted address.
-     */
     const address = place.display_name || place.name || "";
 
     const next = {
@@ -187,23 +154,11 @@ export default function PlacesAutocomplete({
 
     console.log("Selected location:", next);
 
-    /*
-     * Update input immediately.
-     */
     setQuery(address);
 
-    /*
-     * Close dropdown.
-     */
     setSuggestions([]);
     setOpen(false);
 
-    /*
-     * Send coordinates to parent.
-     *
-     * Your Leaflet MapView should receive these
-     * coordinates and move the marker.
-     */
     onChange(next);
   };
 
@@ -220,10 +175,6 @@ export default function PlacesAutocomplete({
           }
         }}
         onBlur={() => {
-          /*
-           * Give the suggestion button time to receive
-           * the click before closing the dropdown.
-           */
           window.setTimeout(() => {
             setOpen(false);
           }, 200);
@@ -253,10 +204,6 @@ export default function PlacesAutocomplete({
                 <button
                   type="button"
                   onMouseDown={(event) => {
-                    /*
-                     * Prevent the input's onBlur from
-                     * closing the dropdown before selection.
-                     */
                     event.preventDefault();
                   }}
                   onClick={() => selectPlace(place)}
