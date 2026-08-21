@@ -48,7 +48,6 @@ export default function CourierOrderDetail() {
 
   useLivePoll(() => dispatch(fetchAssignment(id)))
 
-  // Declared before the loading early-return: hooks must run in the same order every render.
   const live = useLiveLocation((point) => {
     dispatch(pushLocation({ id, lat: point.lat, lng: point.lng, note: 'Live position' }))
   })
@@ -82,11 +81,15 @@ export default function CourierOrderDetail() {
 
   const nextStage = NEXT_STAGE[order.status]
   const closed = order.status === STATUS.DELIVERED || order.status === STATUS.CANCELLED
+  const currentStageLabel = STATUS_META[order.status]?.label?.toLowerCase() ?? order.status
+  const nextStageLabel = nextStage ? STATUS_META[nextStage]?.label?.toLowerCase() : null
+  const canAdvance = Boolean(nextStage) && Boolean(STATUS_META[nextStage])
 
   const advance = async () => {
+    if (!canAdvance) return
     const result = await dispatch(advanceStage({ id: order.id, status: nextStage }))
     if (advanceStage.fulfilled.match(result)) {
-      toast.success(`Marked as ${STATUS_META[nextStage].label.toLowerCase()}`)
+      toast.success(`Marked as ${nextStageLabel}`)
     }
   }
 
@@ -211,11 +214,18 @@ export default function CourierOrderDetail() {
             ) : (
               <>
                 <p className="font-body text-sm text-slate-500">
-                  Current stage is {STATUS_META[order.status].label.toLowerCase()}.
+                  Current stage is {currentStageLabel}.
                 </p>
-                <Button fullWidth size="lg" className="mt-3.5" loading={saving} onClick={advance}>
-                  Mark as {STATUS_META[nextStage].label.toLowerCase()}
-                </Button>
+                {canAdvance ? (
+                  <Button fullWidth size="lg" className="mt-3.5" loading={saving} onClick={advance}>
+                    Mark as {nextStageLabel}
+                  </Button>
+                ) : (
+                  <p className="mt-3.5 rounded-xl bg-amber-100 px-3.5 py-2.5 font-body text-sm text-amber-700">
+                    This delivery is in an unrecognized stage ({order.status}). Contact support before
+                    advancing it.
+                  </p>
+                )}
                 <p className="mt-2.5 font-body text-xs text-slate-400">
                   Stages move in order. The customer is emailed on every change.
                 </p>
@@ -258,9 +268,7 @@ export default function CourierOrderDetail() {
                   >
                     {live.sharing ? 'Stop sharing' : 'Start live tracking'}
                   </Button>
-                  {live.error && (
-                    <p className="font-body text-xs text-rose-700">{live.error}</p>
-                  )}
+                  {live.error && <p className="font-body text-xs text-rose-700">{live.error}</p>}
                 </div>
 
                 <Button
@@ -309,7 +317,10 @@ export default function CourierOrderDetail() {
 
           <Panel title="Parcel">
             <dl className="flex flex-col gap-2.5">
-              <Fact label="Parcel band" value={`${order.price_breakdown?.category_label} · up to ${order.weight_kg} kg`} />
+              <Fact
+                label="Parcel band"
+                value={`${order.price_breakdown?.category_label} · up to ${order.weight_kg} kg`}
+              />
               <Fact label="Booked" value={fullDate(order.created_at)} />
               <Fact label="Sender" value={order.customer?.name} />
             </dl>

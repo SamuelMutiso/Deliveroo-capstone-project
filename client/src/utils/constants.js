@@ -141,9 +141,6 @@ export const HOME_BY_ROLE = {
   [ROLES.ADMIN]: "/admin",
 };
 
-export const MAPS_API_KEY = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN || "";
-export const GOOGLE_MAPS_API_KEY =
-  import.meta.env.VITE_MAPBOX_ACCESS_TOKEN|| "";
 export const CONTACT = {
   company: "Deliveroo Logistics",
   addressLines: [
