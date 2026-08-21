@@ -30,7 +30,7 @@ export default function ForgotPassword() {
           </h1>
 
           <p className="mt-2 font-body text-base text-slate-500">
-            Enter your email address and we'll send you
+            Enter your email address and we’ll send you
             a link to reset your password.
           </p>
         </div>
