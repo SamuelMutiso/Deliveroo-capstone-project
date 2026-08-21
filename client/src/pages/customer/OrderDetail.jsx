@@ -1,19 +1,19 @@
-import { Link, useNavigate, useParams } from 'react-router-dom'
-import { useDispatch, useSelector } from 'react-redux'
-import { useEffect, useState } from 'react'
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import { useEffect, useState } from "react";
 
-import Button from '@/components/ui/Button'
-import ErrorMessage from '@/components/ui/ErrorMessage'
-import Input from '@/components/ui/Input'
-import MapView from '@/components/map/MapView'
-import Modal from '@/components/ui/Modal'
-import OrderTimeline from '@/components/orders/OrderTimeline'
-import PlacesAutocomplete from '@/components/map/PlacesAutocomplete'
-import PriceBreakdown from '@/components/orders/PriceBreakdown'
-import StatusBadge, { PaymentBadge } from '@/components/ui/StatusBadge'
-import StatusStepper from '@/components/orders/StatusStepper'
-import { PageContainer } from '@/components/layout/AppShell'
-import { PageSpinner } from '@/components/ui/Spinner'
+import Button from "@/components/ui/Button";
+import ErrorMessage from "@/components/ui/ErrorMessage";
+import Input from "@/components/ui/Input";
+import MapView from "@/components/map/MapView";
+import Modal from "@/components/ui/Modal";
+import OrderTimeline from "@/components/orders/OrderTimeline";
+import PlacesAutocomplete from "@/components/map/PlacesAutocomplete";
+import PriceBreakdown from "@/components/orders/PriceBreakdown";
+import StatusBadge, { PaymentBadge } from "@/components/ui/StatusBadge";
+import StatusStepper from "@/components/orders/StatusStepper";
+import { PageContainer } from "@/components/layout/AppShell";
+import { PageSpinner } from "@/components/ui/Spinner";
 import {
   cancelOrder,
   changeDestination,
@@ -24,7 +24,7 @@ import {
   selectDetailStatus,
   selectSaveError,
   selectSaving,
-} from '@/features/orders/ordersSlice'
+} from "@/features/orders/ordersSlice";
 import {
   clearCheckout,
   fetchPayment,
@@ -34,60 +34,66 @@ import {
   selectCheckoutMessage,
   selectPayment,
   startCheckout,
-} from '@/features/payments/paymentsSlice'
-import Avatar from '@/components/ui/Avatar'
-import { arrivalBy, distance, duration, fullDate, money } from '@/utils/formatters'
-import { validatePhone } from '@/utils/validators'
-import { useLivePoll } from '@/hooks/useLivePoll'
-import { useToast } from '@/hooks/useToast'
+} from "@/features/payments/paymentsSlice";
+import Avatar from "@/components/ui/Avatar";
+import {
+  arrivalBy,
+  distance,
+  duration,
+  fullDate,
+  money,
+} from "@/utils/formatters";
+import { validatePhone } from "@/utils/validators";
+import { useLivePoll } from "@/hooks/useLivePoll";
+import { useToast } from "@/hooks/useToast";
 
 export default function OrderDetail() {
-  const { id } = useParams()
-  const dispatch = useDispatch()
-  const navigate = useNavigate()
-  const toast = useToast()
+  const { id } = useParams();
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const toast = useToast();
 
-  const order = useSelector(selectCurrentOrder)
-  const status = useSelector(selectDetailStatus)
-  const error = useSelector(selectDetailError)
-  const saving = useSelector(selectSaving)
-  const saveError = useSelector(selectSaveError)
+  const order = useSelector(selectCurrentOrder);
+  const status = useSelector(selectDetailStatus);
+  const error = useSelector(selectDetailError);
+  const saving = useSelector(selectSaving);
+  const saveError = useSelector(selectSaveError);
 
-  const payment = useSelector(selectPayment)
-  const checkingOut = useSelector(selectCheckingOut)
-  const checkoutMessage = useSelector(selectCheckoutMessage)
-  const checkoutError = useSelector(selectCheckoutError)
+  const payment = useSelector(selectPayment);
+  const checkingOut = useSelector(selectCheckingOut);
+  const checkoutMessage = useSelector(selectCheckoutMessage);
+  const checkoutError = useSelector(selectCheckoutError);
 
-  const [destinationOpen, setDestinationOpen] = useState(false)
-  const [cancelOpen, setCancelOpen] = useState(false)
-  const [payOpen, setPayOpen] = useState(false)
-  const [nextDestination, setNextDestination] = useState(null)
-  const [phone, setPhone] = useState('')
-  const [phoneError, setPhoneError] = useState(null)
+  const [destinationOpen, setDestinationOpen] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [payOpen, setPayOpen] = useState(false);
+  const [nextDestination, setNextDestination] = useState(null);
+  const [phone, setPhone] = useState("");
+  const [phoneError, setPhoneError] = useState(null);
 
   useLivePoll(() => {
-    dispatch(fetchOrder(id))
-    dispatch(fetchPayment(id))
-  })
+    dispatch(fetchOrder(id));
+    dispatch(fetchPayment(id));
+  });
 
   useEffect(() => {
-    dispatch(fetchOrder(id))
-    dispatch(fetchPayment(id))
+    dispatch(fetchOrder(id));
+    dispatch(fetchPayment(id));
     return () => {
-      dispatch(clearCurrent())
-      dispatch(resetPayment())
-    }
-  }, [dispatch, id])
+      dispatch(clearCurrent());
+      dispatch(resetPayment());
+    };
+  }, [dispatch, id]);
 
-  if (status === 'loading' || (status === 'idle' && !order)) {
+  if (status === "loading" || (status === "idle" && !order)) {
     return (
       <PageContainer>
         <PageSpinner label="Loading your delivery" />
       </PageContainer>
-    )
+    );
   }
 
-  if (status === 'failed') {
+  if (status === "failed") {
     return (
       <PageContainer className="max-w-xl">
         <ErrorMessage
@@ -101,13 +107,13 @@ export default function OrderDetail() {
           </Button>
         </div>
       </PageContainer>
-    )
+    );
   }
 
-  if (!order) return null
+  if (!order) return null;
 
   const handleDestination = async () => {
-    if (!nextDestination?.lat) return
+    if (!nextDestination?.lat) return;
     const result = await dispatch(
       changeDestination({
         id: order.id,
@@ -117,37 +123,39 @@ export default function OrderDetail() {
           destination_lng: nextDestination.lng,
         },
       }),
-    )
+    );
     if (changeDestination.fulfilled.match(result)) {
-      toast.success('Destination updated and repriced')
-      setDestinationOpen(false)
-      setNextDestination(null)
-      dispatch(fetchPayment(order.id))
+      toast.success("Destination updated and repriced");
+      setDestinationOpen(false);
+      setNextDestination(null);
+      dispatch(fetchPayment(order.id));
     }
-  }
+  };
 
   const handleCancel = async () => {
-    const result = await dispatch(cancelOrder(order.id))
+    const result = await dispatch(cancelOrder(order.id));
     if (cancelOrder.fulfilled.match(result)) {
-      toast.info(`${order.tracking_code} cancelled`)
-      setCancelOpen(false)
+      toast.info(`${order.tracking_code} cancelled`);
+      setCancelOpen(false);
     }
-  }
+  };
 
   const handleCheckout = async () => {
     if (!validatePhone(phone)) {
-      setPhoneError('Enter a valid Safaricom number, for example 0712345678')
-      return
+      setPhoneError("Enter a valid Safaricom number, for example 0712345678");
+      return;
     }
-    setPhoneError(null)
-    const result = await dispatch(startCheckout({ orderId: order.id, phone }))
+    setPhoneError(null);
+    const result = await dispatch(startCheckout({ orderId: order.id, phone }));
     if (startCheckout.fulfilled.match(result)) {
-      setPayOpen(false)
-      toast.success(result.payload.message || 'Check your phone to authorise the payment')
+      setPayOpen(false);
+      toast.success(
+        result.payload.message || "Check your phone to authorise the payment",
+      );
     }
-  }
+  };
 
-  const paid = payment?.status === 'paid'
+  const paid = payment?.status === "paid";
 
   return (
     <PageContainer>
@@ -155,7 +163,7 @@ export default function OrderDetail() {
         <div>
           <button
             type="button"
-            onClick={() => navigate('/dashboard')}
+            onClick={() => navigate("/dashboard")}
             className="-my-1.5 inline-block py-1.5 font-body text-sm text-slate-500 underline-offset-4 hover:underline"
           >
             ← My deliveries
@@ -187,9 +195,12 @@ export default function OrderDetail() {
         <div className="flex flex-col gap-6">
           <MapView
             pickup={{ lat: order.pickup_lat, lng: order.pickup_lng }}
-            destination={{ lat: order.destination_lat, lng: order.destination_lng }}
+            destination={{
+              lat: order.destination_lat,
+              lng: order.destination_lng,
+            }}
             courier={
-              order.current_lat && order.status !== 'pending'
+              order.current_lat && order.status !== "pending"
                 ? { lat: order.current_lat, lng: order.current_lng }
                 : null
             }
@@ -198,14 +209,28 @@ export default function OrderDetail() {
 
           <Panel title="Route">
             <div className="flex flex-col gap-3.5">
-              <Leg tone="bg-brand-600" label="Pickup" value={order.pickup_address} />
-              <Leg tone="bg-slate-950" label="Destination" value={order.destination_address} />
+              <Leg
+                tone="bg-brand-600"
+                label="Pickup"
+                value={order.pickup_address}
+              />
+              <Leg
+                tone="bg-slate-950"
+                label="Destination"
+                value={order.destination_address}
+              />
             </div>
             <dl className="mt-6 grid grid-cols-2 gap-3.5 border-t border-slate-100 pt-3.5 sm:grid-cols-4">
               <Fact label="Distance" value={distance(order.distance_km)} />
               <Fact label="Est. time" value={duration(order.duration_min)} />
-              <Fact label="Parcel band" value={order.price_breakdown?.category_label} />
-              <Fact label="Tier" value={order.price_breakdown?.category_label} />
+              <Fact
+                label="Parcel band"
+                value={order.price_breakdown?.category_label}
+              />
+              <Fact
+                label="Tier"
+                value={order.price_breakdown?.category_label}
+              />
             </dl>
           </Panel>
 
@@ -221,7 +246,9 @@ export default function OrderDetail() {
             <dl className="flex flex-col gap-2.5">
               <Fact label="Name" value={order.recipient_name} />
               <Fact label="Phone" value={order.recipient_phone} mono />
-              {order.recipient_email && <Fact label="Email" value={order.recipient_email} />}
+              {order.recipient_email && (
+                <Fact label="Email" value={order.recipient_email} />
+              )}
               {order.notes && <Fact label="Notes" value={order.notes} />}
             </dl>
           </Panel>
@@ -239,7 +266,9 @@ export default function OrderDetail() {
                     <p className="font-display text-lg font-semibold text-slate-950">
                       {order.courier.name}
                     </p>
-                    <p className="font-body text-sm text-slate-500">{order.courier.vehicle}</p>
+                    <p className="font-body text-sm text-slate-500">
+                      {order.courier.vehicle}
+                    </p>
                     <a
                       href={`tel:${order.courier.phone}`}
                       className="mt-0.5 inline-block py-1.5 font-mono text-sm font-medium text-brand-700 underline underline-offset-2"
@@ -249,27 +278,30 @@ export default function OrderDetail() {
                   </div>
                 </div>
                 <p className="font-body text-xs text-slate-400">
-                  Check this photo matches the person before you hand over the parcel.
+                  Check this photo matches the person before you hand over the
+                  parcel.
                 </p>
-                {order.duration_min > 0 && order.status !== 'delivered' && (
+                {order.duration_min > 0 && order.status !== "delivered" && (
                   <p className="rounded-xl bg-brand-100 px-3.5 py-2.5 font-body text-sm text-brand-950">
-                    Arriving at the destination around{' '}
-                    <strong>{arrivalBy(order.duration_min)}</strong> — about{' '}
+                    Arriving at the destination around{" "}
+                    <strong>{arrivalBy(order.duration_min)}</strong> — about{" "}
                     {duration(order.duration_min)} on the road.
                   </p>
                 )}
               </div>
             ) : (
               <p className="font-body text-sm text-slate-500">
-                No rider assigned yet. Operations will allocate one shortly, and you will see their
-                photo here.
+                No rider assigned yet. Operations will allocate one shortly, and
+                you will see their photo here.
               </p>
             )}
           </Panel>
 
           <Panel title="Payment">
             <div className="flex items-baseline justify-between gap-3.5">
-              <span className="font-body text-sm text-slate-500">Amount due</span>
+              <span className="font-body text-sm text-slate-500">
+                Amount due
+              </span>
               <span className="font-display text-xl font-semibold text-slate-950">
                 {money(order.price_kes)}
               </span>
@@ -287,10 +319,10 @@ export default function OrderDetail() {
               ) : (
                 <Button
                   fullWidth
-                  disabled={order.status === 'cancelled'}
+                  disabled={order.status === "cancelled"}
                   onClick={() => {
-                    dispatch(clearCheckout())
-                    setPayOpen(true)
+                    dispatch(clearCheckout());
+                    setPayOpen(true);
                   }}
                 >
                   Pay with M-Pesa
@@ -337,7 +369,11 @@ export default function OrderDetail() {
             <Button variant="ghost" onClick={() => setDestinationOpen(false)}>
               Keep current
             </Button>
-            <Button loading={saving} disabled={!nextDestination?.lat} onClick={handleDestination}>
+            <Button
+              loading={saving}
+              disabled={!nextDestination?.lat}
+              onClick={handleDestination}
+            >
               Update and reprice
             </Button>
           </>
@@ -371,7 +407,8 @@ export default function OrderDetail() {
         }
       >
         <p className="font-body text-base text-slate-600">
-          This cannot be undone. You would need to create a new order to send the parcel again.
+          This cannot be undone. You would need to create a new order to send
+          the parcel again.
         </p>
       </Modal>
 
@@ -411,37 +448,48 @@ export default function OrderDetail() {
         )}
       </Modal>
     </PageContainer>
-  )
+  );
 }
 
 function Panel({ title, children }) {
   return (
     <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-inset ring-slate-100">
-      <h2 className="font-display text-xl font-semibold text-slate-950">{title}</h2>
+      <h2 className="font-display text-xl font-semibold text-slate-950">
+        {title}
+      </h2>
       <div className="mt-3.5">{children}</div>
     </section>
-  )
+  );
 }
 
 function Leg({ tone, label, value }) {
   return (
     <div className="flex items-start gap-2.5">
-      <span className={`mt-[7px] h-2.5 w-2.5 shrink-0 rounded-full ${tone}`} aria-hidden="true" />
+      <span
+        className={`mt-[7px] h-2.5 w-2.5 shrink-0 rounded-full ${tone}`}
+        aria-hidden="true"
+      />
       <div>
-        <p className="font-body text-xs uppercase tracking-[0.12em] text-slate-400">{label}</p>
+        <p className="font-body text-xs uppercase tracking-[0.12em] text-slate-400">
+          {label}
+        </p>
         <p className="font-body text-base text-slate-800">{value}</p>
       </div>
     </div>
-  )
+  );
 }
 
 function Fact({ label, value, mono }) {
   return (
     <div>
-      <dt className="font-body text-xs uppercase tracking-[0.12em] text-slate-400">{label}</dt>
-      <dd className={`mt-0.5 text-base text-slate-800 ${mono ? 'font-mono' : 'font-body'}`}>
-        {value || '—'}
+      <dt className="font-body text-xs uppercase tracking-[0.12em] text-slate-400">
+        {label}
+      </dt>
+      <dd
+        className={`mt-0.5 text-base text-slate-800 ${mono ? "font-mono" : "font-body"}`}
+      >
+        {value || "—"}
       </dd>
     </div>
-  )
+  );
 }

@@ -158,9 +158,180 @@
       "password": "customer1234",
       "role": "customer",
       "is_active": true
+    },
+    {
+      "id": 16,
+      "name": "Michelle Wanjugu",
+      "email": "wanjuguzzz@gmail.com",
+      "password": "12345678",
+      "role": "customer"
     }
   ],
   "orders": [
+    {
+      "pickup_address": "Sarit Centre Roundabout, Parklands location, Parklands/Highridge ward, Highridge division, Westlands, Nairobi, Nairobi County, 97104, Kenya",
+      "pickup_lat": -1.261941,
+      "pickup_lng": 36.8034696,
+      "destination_address": "QuickMart Kahawa Sukari, Kahawa Sukari Avenue, Kahawa Wendani, Nairobi, Ruiru, Kiambu, 00609, Kenya",
+      "destination_lat": -1.1893668,
+      "destination_lng": 36.9323234,
+      "weight_category": "light",
+      "recipient_name": "Michelle Wanjugu",
+      "recipient_phone": "0115028300",
+      "recipient_email": null,
+      "notes": null,
+      "id": 138,
+      "tracking_code": "DLV-138RVB",
+      "customer_id": 16,
+      "courier_id": 2,
+      "status": "cancelled",
+      "weight_kg": 2,
+      "distance_km": 16.44,
+      "duration_min": 47,
+      "price_kes": 870,
+      "price_breakdown": {
+        "currency": "KES",
+        "distance_km": 16.44,
+        "category": "light",
+        "category_label": "Light",
+        "lines": [
+          {
+            "label": "Base fare",
+            "amount": 180
+          },
+          {
+            "label": "Distance (16.44 km)",
+            "amount": 690.48
+          },
+          {
+            "label": "Light handling multiplier",
+            "amount": 0
+          },
+          {
+            "label": "Handling fee",
+            "amount": 0
+          }
+        ],
+        "total": 870
+      },
+      "payment_status": "unpaid",
+      "is_editable": true,
+      "is_cancellable": true,
+      "current_lat": -1.261941,
+      "current_lng": 36.8034696,
+      "created_at": "2026-08-21T09:18:40.865Z",
+      "updated_at": "2026-08-21T09:18:40.865Z",
+      "lat": -1.300497,
+      "lng": 36.784669
+    },
+    {
+      "pickup_address": "Sigona, Kiambu, Kenya",
+      "pickup_lat": -1.218502,
+      "pickup_lng": 36.651413,
+      "destination_address": "Banana, Kiambu, Kenya",
+      "destination_lat": -1.174457,
+      "destination_lng": 36.758972,
+      "weight_category": "heavy",
+      "recipient_name": "Michelle Wanjugu",
+      "recipient_phone": "0115028300",
+      "recipient_email": "wanjuguzzz@gmail.com",
+      "notes": null,
+      "id": 137,
+      "tracking_code": "DLV-137Q0B",
+      "customer_id": 16,
+      "courier_id": 2,
+      "status": "assigned",
+      "weight_kg": 20,
+      "distance_km": 12.92,
+      "duration_min": 39,
+      "price_kes": 1550,
+      "price_breakdown": {
+        "currency": "KES",
+        "distance_km": 12.92,
+        "category": "heavy",
+        "category_label": "Heavy",
+        "lines": [
+          {
+            "label": "Base fare",
+            "amount": 180
+          },
+          {
+            "label": "Distance (12.92 km)",
+            "amount": 542.64
+          },
+          {
+            "label": "Heavy handling multiplier",
+            "amount": 650.38
+          },
+          {
+            "label": "Handling fee",
+            "amount": 180
+          }
+        ],
+        "total": 1550
+      },
+      "payment_status": "unpaid",
+      "is_editable": true,
+      "is_cancellable": true,
+      "current_lat": -1.218502,
+      "current_lng": 36.651413,
+      "created_at": "2026-08-21T08:23:15.095Z",
+      "updated_at": "2026-08-21T08:23:15.095Z"
+    },
+    {
+      "pickup_address": "Nairobi, Kenya",
+      "pickup_lat": -1.289001,
+      "pickup_lng": 36.817281,
+      "destination_address": "Ruaka, Kiambu, Kenya",
+      "destination_lat": -1.206819,
+      "destination_lng": 36.785915,
+      "weight_category": "light",
+      "recipient_name": "Michelle Wanjugu",
+      "recipient_phone": "0115028300",
+      "recipient_email": "wanjuguzzz@gmail.com",
+      "notes": "Fragile!",
+      "id": 136,
+      "tracking_code": "DLV-136HLH",
+      "customer_id": 16,
+      "courier_id": 2,
+      "status": "cancelled",
+      "weight_kg": 2,
+      "distance_km": 9.78,
+      "duration_min": 31,
+      "price_kes": 590,
+      "price_breakdown": {
+        "currency": "KES",
+        "distance_km": 9.78,
+        "category": "light",
+        "category_label": "Light",
+        "lines": [
+          {
+            "label": "Base fare",
+            "amount": 180
+          },
+          {
+            "label": "Distance (9.78 km)",
+            "amount": 410.76
+          },
+          {
+            "label": "Light handling multiplier",
+            "amount": 0
+          },
+          {
+            "label": "Handling fee",
+            "amount": 0
+          }
+        ],
+        "total": 590
+      },
+      "payment_status": "paid",
+      "is_editable": true,
+      "is_cancellable": true,
+      "current_lat": -1.289001,
+      "current_lng": 36.817281,
+      "created_at": "2026-08-21T08:11:51.972Z",
+      "updated_at": "2026-08-21T08:11:51.972Z"
+    },
     {
       "pickup_address": "Sarit Centre, Westlands",
       "pickup_lat": -1.2626,
@@ -2768,6 +2939,34 @@
       "status": "pending",
       "note": "Order created",
       "created_at": "2026-08-20T17:25:13.911Z"
+    },
+    {
+      "id": 95,
+      "order_id": 136,
+      "status": "pending",
+      "note": "Order created",
+      "created_at": "2026-08-21T08:11:51.972Z"
+    },
+    {
+      "id": 96,
+      "order_id": 137,
+      "status": "pending",
+      "note": "Order created",
+      "created_at": "2026-08-21T08:23:15.095Z"
+    },
+    {
+      "id": 97,
+      "order_id": 138,
+      "status": "pending",
+      "note": "Order created",
+      "created_at": "2026-08-21T09:18:40.865Z"
+    },
+    {
+      "id": 98,
+      "order_id": 138,
+      "status": "in_transit",
+      "description": "Order status updated to in_transit.",
+      "created_at": "2026-08-21T09:20:21.517Z"
     }
   ],
   "courierApplications": [],
@@ -2791,6 +2990,24 @@
     {
       "value": "truck",
       "label": "Truck"
+    }
+  ],
+  "payments": [
+    {
+      "id": 1,
+      "order_id": 136,
+      "amount_kes": 590,
+      "method": "mpesa",
+      "created_at": "2026-08-21T08:13:40.380Z",
+      "status": "paid",
+      "phone": "0115028300",
+      "checkout_request_id": "ws_CO_SIM_136_1787300020380",
+      "merchant_request_id": "SIM-136",
+      "mpesa_receipt": "SIM136KNYV",
+      "result_description": "The service request is processed successfully.",
+      "simulated": true,
+      "updated_at": "2026-08-21T08:13:46.413Z",
+      "paid_at": "2026-08-21T08:13:46.413Z"
     }
   ]
 }

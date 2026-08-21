@@ -1,113 +1,211 @@
-import { Autocomplete, useJsApiLoader } from '@react-google-maps/api'
-import { useId, useMemo, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from "react";
 
-import Input from '@/components/ui/Input'
-import { MAP_LIBRARIES, MAPS_API_KEY, NAIROBI_PLACES } from '@/utils/constants'
+import Input from "@/components/ui/Input";
 
-const KENYA_BOUNDS = {
-  north: 5.02,
-  south: -4.72,
-  west: 33.9,
-  east: 41.92,
-}
+const NAIROBI_VIEWBOX = "36.65,-1.15,37.05,-1.45";
 
-export default function PlacesAutocomplete(props) {
-  if (!MAPS_API_KEY) return <LandmarkPicker {...props} />
-  return <PlacesField {...props} />
-}
+export default function PlacesAutocomplete({
+  label,
+  value,
+  onChange,
+  error,
+  hint,
+  placeholder,
+}) {
+  const [query, setQuery] = useState(value?.address || "");
+  const [suggestions, setSuggestions] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [open, setOpen] = useState(false);
 
-function PlacesField({ label, value, onChange, error, hint, placeholder }) {
-  const { isLoaded, loadError } = useJsApiLoader({
-    id: 'deliveroo-google-maps',
-    googleMapsApiKey: MAPS_API_KEY,
-    libraries: MAP_LIBRARIES,
-  })
-  const [text, setText] = useState(value?.address || '')
-  const widget = useRef(null)
-  const inputId = useId()
+  const inputId = useId();
+  const debounceRef = useRef(null);
+  const abortRef = useRef(null);
 
-  const handlePlaceChanged = () => {
-    const place = widget.current?.getPlace()
-    if (!place?.geometry?.location) return
+  /*
+   * Keep the input synchronized when the parent changes
+   * the selected location externally.
+   */
+  useEffect(() => {
+    if (value?.address !== undefined && value.address !== query) {
+      setQuery(value.address || "");
+    }
+  }, [value?.address]);
+
+  /*
+   * Clean up timers and requests when component unmounts.
+   */
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
+
+      abortRef.current?.abort();
+    };
+  }, []);
+
+  const searchPlaces = async (searchQuery) => {
+    const trimmed = searchQuery.trim();
+
+    if (!trimmed) {
+      setSuggestions([]);
+      setLoading(false);
+      return;
+    }
+
+    /*
+     * Cancel the previous search request.
+     */
+    abortRef.current?.abort();
+
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    setLoading(true);
+
+    try {
+      const url = new URL("https://nominatim.openstreetmap.org/search");
+
+      url.searchParams.set("q", trimmed);
+
+      /*
+       * Ask Nominatim for proper address information.
+       */
+      url.searchParams.set("format", "json");
+
+      url.searchParams.set("addressdetails", "1");
+
+      /*
+       * Search only inside the Nairobi area.
+       */
+      url.searchParams.set("viewbox", NAIROBI_VIEWBOX);
+
+      /*
+       * Prefer results inside the viewbox.
+       */
+      url.searchParams.set("bounded", "1");
+
+      /*
+       * Return several useful result types:
+       * buildings, roads, shops, hospitals,
+       * malls, landmarks, etc.
+       */
+      url.searchParams.set("limit", "8");
+
+      /*
+       * Restrict results to Kenya.
+       */
+      url.searchParams.set("countrycodes", "ke");
+
+      const response = await fetch(url, {
+        signal: controller.signal,
+        headers: {
+          Accept: "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Nominatim search failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (controller.signal.aborted) {
+        return;
+      }
+
+      console.log("Nominatim suggestions:", data);
+
+      setSuggestions(Array.isArray(data) ? data : []);
+    } catch (error) {
+      if (error.name === "AbortError") {
+        return;
+      }
+
+      console.error("Location search error:", error);
+      setSuggestions([]);
+    } finally {
+      if (!controller.signal.aborted) {
+        setLoading(false);
+      }
+    }
+  };
+
+  const handleChange = (event) => {
+    const nextQuery = event.target.value;
+
+    setQuery(nextQuery);
+    setOpen(true);
+
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+
+    if (!nextQuery.trim()) {
+      abortRef.current?.abort();
+
+      setSuggestions([]);
+      setLoading(false);
+
+      onChange(null);
+
+      return;
+    }
+
+    /*
+     * Wait until the user stops typing before searching.
+     */
+    debounceRef.current = setTimeout(() => {
+      searchPlaces(nextQuery);
+    }, 500);
+  };
+
+  const selectPlace = (place) => {
+    if (!place) {
+      return;
+    }
+
+    const lat = Number(place.lat);
+    const lng = Number(place.lon);
+
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      console.error("Invalid location returned:", place);
+      return;
+    }
+
+    /*
+     * Nominatim's display_name is already a nicely
+     * formatted address.
+     */
+    const address = place.display_name || place.name || "";
 
     const next = {
-      address: place.formatted_address || place.name || text,
-      lat: place.geometry.location.lat(),
-      lng: place.geometry.location.lng(),
-    }
-    setText(next.address)
-    onChange(next)
-  }
+      address,
+      lat,
+      lng,
+    };
 
-  const handleManualEntry = (event) => {
-    setText(event.target.value)
-    if (!event.target.value) onChange(null)
-  }
+    console.log("Selected location:", next);
 
-  if (loadError) {
-    return (
-      <LandmarkPicker
-        label={label}
-        value={value}
-        onChange={onChange}
-        error={error}
-        hint="Google Places is unavailable, so pick from the list below."
-      />
-    )
-  }
+    /*
+     * Update input immediately.
+     */
+    setQuery(address);
 
-  if (!isLoaded) {
-    return (
-      <LandmarkPicker
-        label={label}
-        value={value}
-        onChange={onChange}
-        error={error}
-        hint="Loading address search…"
-      />
-    )
-  }
+    /*
+     * Close dropdown.
+     */
+    setSuggestions([]);
+    setOpen(false);
 
-  return (
-    <Autocomplete
-      onLoad={(instance) => {
-        widget.current = instance
-        instance.setFields(['formatted_address', 'geometry.location', 'name'])
-        instance.setBounds(KENYA_BOUNDS)
-        instance.setOptions({ strictBounds: false, componentRestrictions: { country: 'ke' } })
-      }}
-      onPlaceChanged={handlePlaceChanged}
-    >
-      <Input
-        id={inputId}
-        label={label}
-        value={text}
-        onChange={handleManualEntry}
-        placeholder={placeholder || 'Start typing an address'}
-        error={error}
-        hint={hint || (value?.lat ? `Pinned at ${value.lat.toFixed(4)}, ${value.lng.toFixed(4)}` : undefined)}
-        autoComplete="off"
-      />
-    </Autocomplete>
-  )
-}
-
-function LandmarkPicker({ label, value, onChange, error, hint, placeholder }) {
-  const [query, setQuery] = useState(value?.address || '')
-  const [browsing, setBrowsing] = useState(false)
-  const inputId = useId()
-
-  const matches = useMemo(() => {
-    const needle = query.trim().toLowerCase()
-    if (!needle) return NAIROBI_PLACES.slice(0, 6)
-    return NAIROBI_PLACES.filter((place) => place.name.toLowerCase().includes(needle)).slice(0, 6)
-  }, [query])
-
-  const choose = (place) => {
-    setQuery(place.name)
-    setBrowsing(false)
-    onChange({ address: place.name, lat: place.lat, lng: place.lng })
-  }
+    /*
+     * Send coordinates to parent.
+     *
+     * Your Leaflet MapView should receive these
+     * coordinates and move the marker.
+     */
+    onChange(next);
+  };
 
   return (
     <div className="relative">
@@ -115,43 +213,69 @@ function LandmarkPicker({ label, value, onChange, error, hint, placeholder }) {
         id={inputId}
         label={label}
         value={query}
-        onChange={(event) => {
-          setQuery(event.target.value)
-          setBrowsing(true)
-          if (!event.target.value) onChange(null)
+        onChange={handleChange}
+        onFocus={() => {
+          if (suggestions.length > 0) {
+            setOpen(true);
+          }
         }}
-        onFocus={() => setBrowsing(true)}
-        onBlur={() => window.setTimeout(() => setBrowsing(false), 160)}
-        placeholder={placeholder || 'Sarit Centre, Westlands'}
+        onBlur={() => {
+          /*
+           * Give the suggestion button time to receive
+           * the click before closing the dropdown.
+           */
+          window.setTimeout(() => {
+            setOpen(false);
+          }, 200);
+        }}
+        placeholder={placeholder || "Start typing an address"}
         error={error}
         hint={
           hint ||
-          (value?.lat
+          (value?.lat !== undefined && value?.lng !== undefined
             ? `Pinned at ${value.lat.toFixed(4)}, ${value.lng.toFixed(4)}`
-            : 'Start typing, then pick a pickup point from the list')
+            : undefined)
         }
         autoComplete="off"
       />
 
-      {browsing && matches.length > 0 && (
-        <ul className="absolute inset-x-0 top-[4.75rem] z-20 max-h-64 overflow-y-auto rounded-xl bg-white py-1.5 shadow-xl ring-1 ring-inset ring-slate-200">
-          {matches.map((place) => (
-            <li key={place.name}>
-              <button
-                type="button"
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={() => choose(place)}
-                className="flex w-full items-center justify-between gap-3.5 px-3.5 py-2.5 text-left transition hover:bg-brand-50"
-              >
-                <span className="font-body text-sm text-slate-800">{place.name}</span>
-                <span className="shrink-0 font-mono text-xs text-slate-400">
-                  {place.lat.toFixed(3)}, {place.lng.toFixed(3)}
-                </span>
-              </button>
+      {open && (loading || suggestions.length > 0) && (
+        <ul className="absolute inset-x-0 top-[4.75rem] z-30 max-h-72 overflow-y-auto rounded-xl bg-white py-1.5 shadow-xl ring-1 ring-inset ring-slate-200">
+          {loading && (
+            <li className="px-3.5 py-3 text-sm text-slate-500">
+              Searching Nairobi...
             </li>
-          ))}
+          )}
+
+          {!loading &&
+            suggestions.map((place) => (
+              <li key={place.place_id}>
+                <button
+                  type="button"
+                  onMouseDown={(event) => {
+                    /*
+                     * Prevent the input's onBlur from
+                     * closing the dropdown before selection.
+                     */
+                    event.preventDefault();
+                  }}
+                  onClick={() => selectPlace(place)}
+                  className="flex w-full flex-col gap-0.5 px-3.5 py-2.5 text-left transition hover:bg-brand-50"
+                >
+                  <span className="font-body text-sm font-medium text-slate-800">
+                    {place.name || place.display_name}
+                  </span>
+
+                  {place.display_name && (
+                    <span className="font-body text-xs text-slate-400">
+                      {place.display_name}
+                    </span>
+                  )}
+                </button>
+              </li>
+            ))}
         </ul>
       )}
     </div>
-  )
+  );
 }
