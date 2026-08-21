@@ -158,6 +158,13 @@
       "password": "customer1234",
       "role": "customer",
       "is_active": true
+    },
+    {
+      "id": 16,
+      "name": "mahinda karanja",
+      "email": "mahindakaranja131@gmail.com",
+      "password": "itn96U3iFrxRqrB",
+      "role": "customer"
     }
   ],
   "orders": [
