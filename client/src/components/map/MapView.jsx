@@ -1,185 +1,351 @@
-import { GoogleMap, Marker, Polyline, useJsApiLoader } from '@react-google-maps/api'
-import { useEffect, useMemo, useState } from 'react'
+import {
+  MapContainer,
+  Marker,
+  Polyline,
+  TileLayer,
+  useMap,
+} from "react-leaflet";
 
-import { MAP_LIBRARIES, MAPS_API_KEY, NAIROBI_CENTER } from '@/utils/constants'
-import Spinner from '@/components/ui/Spinner'
+import L from "leaflet";
+import { useEffect, useMemo, useState } from "react";
 
-const MAP_STYLE = [
-  { elementType: 'geometry', stylers: [{ color: '#f4f7f7' }] },
-  { elementType: 'labels.icon', stylers: [{ visibility: 'off' }] },
-  { elementType: 'labels.text.fill', stylers: [{ color: '#57767b' }] },
-  { elementType: 'labels.text.stroke', stylers: [{ color: '#ffffff' }] },
-  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#ffffff' }] },
-  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#e9edf0' }] },
-  { featureType: 'poi', elementType: 'geometry', stylers: [{ color: '#e9edf0' }] },
-  { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#f1efe4' }] },
-  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#c9d7d8' }] },
-  { featureType: 'transit', stylers: [{ visibility: 'off' }] },
-]
+import "leaflet/dist/leaflet.css";
 
-const OPTIONS = {
-  styles: MAP_STYLE,
-  disableDefaultUI: true,
-  zoomControl: true,
-  gestureHandling: 'cooperative',
-  clickableIcons: false,
+import Spinner from "@/components/ui/Spinner";
+import { NAIROBI_CENTER } from "@/utils/constants";
+
+const ROUTING_PROFILE = "driving";
+
+const ROUTING_URL = "https://router.project-osrm.org/route/v1";
+
+const DEFAULT_ZOOM = 12;
+
+const ROUTE_COLOR = "#9c5f02";
+
+const NAIROBI_BOUNDS = [
+  [-1.45, 36.65],
+  [-1.15, 37.05],
+];
+
+{/*
+ * Create custom pin icons.
+ */}
+function createPinIcon(fill, ring) {
+  return L.divIcon({
+    className: "",
+    html: `
+      <div
+        style="
+          width: 28px;
+          height: 28px;
+          border-radius: 50% 50% 50% 0;
+          background: ${fill};
+          border: 3px solid ${ring};
+          transform: rotate(-45deg);
+          box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+        "
+      ></div>
+    `,
+    iconSize: [28, 28],
+    iconAnchor: [14, 28],
+  });
 }
 
-function pin(fill, ring) {
-  return {
-    path: 'M12 2C7.9 2 4.5 5.3 4.5 9.4 4.5 15 12 22 12 22s7.5-7 7.5-12.6C19.5 5.3 16.1 2 12 2Z',
-    fillColor: fill,
-    fillOpacity: 1,
-    strokeColor: ring,
-    strokeWeight: 2,
-    scale: 1.5,
-    anchor: { x: 12, y: 22 },
+const pickupIcon = createPinIcon("#1f2937", "#ffc400");
+
+const destinationIcon = createPinIcon("#0d1417", "#ffffff");
+
+const courierIcon = createPinIcon("#f2900d", "#ffffff");
+
+function MapController({ pickup, destination, courier, routeCoordinates }) {
+  const map = useMap();
+
+  useEffect(() => {
+    const points = [];
+
+    if (pickup?.lat != null && pickup?.lng != null) {
+      points.push([pickup.lat, pickup.lng]);
+    }
+
+    if (destination?.lat != null && destination?.lng != null) {
+      points.push([destination.lat, destination.lng]);
+    }
+
+    if (courier?.lat != null && courier?.lng != null) {
+      points.push([courier.lat, courier.lng]);
+    }
+
+    if (routeCoordinates.length > 1) {
+      const bounds = L.latLngBounds(routeCoordinates);
+
+      map.fitBounds(bounds, {
+        padding: [50, 50],
+        maxZoom: 15,
+        animate: true,
+        duration: 0.8,
+      });
+
+      return;
+    }
+
+    if (points.length > 1) {
+      const bounds = L.latLngBounds(points);
+
+      map.fitBounds(bounds, {
+        padding: [50, 50],
+        maxZoom: 15,
+        animate: true,
+        duration: 0.8,
+      });
+
+      return;
+    }
+
+    if (points.length === 1) {
+      map.flyTo(points[0], 14, {
+        duration: 0.8,
+      });
+
+      return;
+    }
+
+    map.flyTo([NAIROBI_CENTER.lat, NAIROBI_CENTER.lng], DEFAULT_ZOOM, {
+      duration: 0.8,
+    });
+  }, [map, pickup, destination, courier, routeCoordinates]);
+
+  return null;
+}
+
+async function getRoute(pickup, destination, signal) {
+  if (
+    pickup?.lat == null ||
+    pickup?.lng == null ||
+    destination?.lat == null ||
+    destination?.lng == null
+  ) {
+    return null;
   }
-}
 
-export default function MapView(props) {
-  if (!MAPS_API_KEY) {
-    const { height = 'h-[22rem]', pickup, destination, courier } = props
-    return <MapFallback height={height} points={{ pickup, destination, courier }} />
+  const coordinates = [
+    `${pickup.lng},${pickup.lat}`,
+    `${destination.lng},${destination.lat}`,
+  ].join(";");
+
+  const url =
+    `${ROUTING_URL}/${ROUTING_PROFILE}/${coordinates}` +
+    `?overview=full&geometries=geojson&steps=false`;
+
+  const response = await fetch(url, {
+    signal,
+  });
+
+  if (!response.ok) {
+    throw new Error(`OSRM routing failed: ${response.status}`);
   }
-  return <LiveMap {...props} />
+
+  const data = await response.json();
+
+  if (data.code !== "Ok") {
+    throw new Error(data.message || "No route found");
+  }
+
+  const route = data.routes?.[0];
+
+  if (!route?.geometry?.coordinates) {
+    throw new Error("OSRM returned no route geometry");
+  }
+
+  return route.geometry.coordinates.map(([lng, lat]) => [lat, lng]);
 }
 
-function LiveMap({
+export default function MapView({
   pickup,
   destination,
   courier,
-  polyline,
-  height = 'h-[22rem]',
+  height = "h-[22rem]",
   onMapClick,
 }) {
-  const { isLoaded, loadError } = useJsApiLoader({
-    id: 'deliveroo-google-maps',
-    googleMapsApiKey: MAPS_API_KEY,
-    libraries: MAP_LIBRARIES,
-  })
-  const [map, setMap] = useState(null)
+  const [routeCoordinates, setRouteCoordinates] = useState([]);
 
-  const points = useMemo(
-    () => [pickup, destination, courier].filter((point) => point?.lat && point?.lng),
-    [pickup, destination, courier],
-  )
+  const [routeLoading, setRouteLoading] = useState(false);
 
-  const path = useMemo(() => {
-    if (!isLoaded || !polyline || !window.google?.maps?.geometry?.encoding) return null
-    try {
-      return window.google.maps.geometry.encoding
-        .decodePath(polyline)
-        .map((point) => ({ lat: point.lat(), lng: point.lng() }))
-    } catch {
-      return null
-    }
-  }, [isLoaded, polyline])
+  const [routeError, setRouteError] = useState("");
+
+  const pickupLat = pickup?.lat;
+  const pickupLng = pickup?.lng;
+  const destinationLat = destination?.lat;
+  const destinationLng = destination?.lng;
 
   useEffect(() => {
-    if (!map || !points.length || !window.google) return
-    if (points.length === 1) {
-      map.setCenter(points[0])
-      map.setZoom(14)
-      return
+    if (
+      pickupLat == null ||
+      pickupLng == null ||
+      destinationLat == null ||
+      destinationLng == null
+    ) {
+      setRouteCoordinates([]);
+      setRouteError("");
+      setRouteLoading(false);
+
+      return;
     }
-    const bounds = new window.google.maps.LatLngBounds()
-    points.forEach((point) => bounds.extend(point))
-    map.fitBounds(bounds, { top: 56, bottom: 56, left: 56, right: 56 })
-  }, [map, points])
 
-  if (loadError) {
-    return (
-      <div
-        className={`flex ${height} items-center justify-center rounded-2xl bg-red-100 px-6 text-center`}
-      >
-        <p className="font-body text-sm text-red-700">
-          Google Maps could not load. Check that VITE_GOOGLE_MAPS_API_KEY is valid and that the Maps
-          JavaScript API is enabled.
-        </p>
-      </div>
-    )
-  }
+    const controller = new AbortController();
 
-  if (!isLoaded) {
-    return (
-      <div className={`flex ${height} items-center justify-center rounded-2xl bg-slate-50`}>
-        <Spinner label="Loading map" />
-      </div>
-    )
-  }
+    const calculateRoute = async () => {
+      setRouteLoading(true);
+      setRouteError("");
 
-  return (
-    <div className={`${height} overflow-hidden rounded-2xl ring-1 ring-inset ring-slate-200`}>
-      <GoogleMap
-        mapContainerStyle={{ width: '100%', height: '100%' }}
-        center={points[0] || NAIROBI_CENTER}
-        zoom={12}
-        options={OPTIONS}
-        onLoad={setMap}
-        onUnmount={() => setMap(null)}
-        onClick={onMapClick ? (event) => onMapClick({ lat: event.latLng.lat(), lng: event.latLng.lng() }) : undefined}
-      >
-        {pickup?.lat && <Marker position={pickup} icon={pin('#1f2937', '#ffc400')} title="Pickup" zIndex={2} />}
-        {destination?.lat && (
-          <Marker position={destination} icon={pin('#0d1417', '#ffffff')} title="Destination" zIndex={2} />
-        )}
-        {courier?.lat && (
-          <Marker position={courier} icon={pin('#f2900d', '#ffffff')} title="Courier" zIndex={3} />
-        )}
-        {path && (
-          <Polyline
-            path={path}
-            options={{ strokeColor: '#9c5f02', strokeOpacity: 0.9, strokeWeight: 4 }}
-          />
-        )}
-        {!path && pickup?.lat && destination?.lat && (
-          <Polyline
-            path={[pickup, destination]}
-            options={{
-              strokeColor: '#57767b',
-              strokeOpacity: 0,
-              strokeWeight: 3,
-              icons: [
-                {
-                  icon: { path: 'M 0,-1 0,1', strokeOpacity: 0.7, scale: 3 },
-                  offset: '0',
-                  repeat: '14px',
-                },
-              ],
-            }}
-          />
-        )}
-      </GoogleMap>
-    </div>
-  )
-}
+      try {
+        const coordinates = await getRoute(
+          { lat: pickupLat, lng: pickupLng },
+          { lat: destinationLat, lng: destinationLng },
+          controller.signal,
+        );
 
-function MapFallback({ height, points }) {
-  const rows = [
-    ['Pickup', points.pickup, 'bg-brand-600'],
-    ['Destination', points.destination, 'bg-slate-950'],
-    ['Courier', points.courier, 'bg-amber-500'],
-  ].filter(([, point]) => point?.lat && point?.lng)
+        if (controller.signal.aborted) {
+          return;
+        }
+
+        setRouteCoordinates(coordinates || []);
+      } catch (error) {
+        if (error.name === "AbortError") {
+          return;
+        }
+
+        console.error("Route calculation error:", error);
+
+        setRouteCoordinates([]);
+
+        setRouteError("We couldn't calculate the road route.");
+      } finally {
+        if (!controller.signal.aborted) {
+          setRouteLoading(false);
+        }
+      }
+    };
+
+    calculateRoute();
+
+    return () => {
+      controller.abort();
+    };
+  }, [pickupLat, pickupLng, destinationLat, destinationLng]);
+
+  const center = useMemo(() => [NAIROBI_CENTER.lat, NAIROBI_CENTER.lng], []);
+
+  const routeUnderlay = useMemo(() => routeCoordinates, [routeCoordinates]);
 
   return (
     <div
-      className={`flex ${height} flex-col justify-center gap-3.5 rounded-2xl bg-slate-50 p-6 ring-1 ring-inset ring-slate-200`}
+      className={`relative ${height} overflow-hidden rounded-2xl ring-1 ring-inset ring-slate-200`}
     >
-      <p className="font-body text-sm text-slate-500">
-        Add VITE_GOOGLE_MAPS_API_KEY to your client .env to see the live map and route.
-      </p>
-      <dl className="flex flex-col gap-2.5">
-        {rows.map(([label, point, tone]) => (
-          <div key={label} className="flex items-center gap-2.5">
-            <span className={`h-2.5 w-2.5 rounded-full ${tone}`} aria-hidden="true" />
-            <dt className="w-28 font-body text-sm font-semibold text-slate-700">{label}</dt>
-            <dd className="font-mono text-sm text-slate-500">
-              {point.lat.toFixed(4)}, {point.lng.toFixed(4)}
-            </dd>
+      <MapContainer
+        center={center}
+        zoom={DEFAULT_ZOOM}
+        minZoom={11}
+        maxZoom={18}
+        maxBounds={NAIROBI_BOUNDS}
+        maxBoundsViscosity={0.8}
+        scrollWheelZoom={true}
+        className="h-full w-full"
+        attributionControl={true}
+      >
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
+        {pickup?.lat != null && pickup?.lng != null && (
+          <Marker
+            position={[pickup.lat, pickup.lng]}
+            icon={pickupIcon}
+            title="Pickup"
+          />
+        )}
+        {destination?.lat != null && destination?.lng != null && (
+          <Marker
+            position={[destination.lat, destination.lng]}
+            icon={destinationIcon}
+            title="Destination"
+          />
+        )}
+        {courier?.lat != null && courier?.lng != null && (
+          <Marker
+            position={[courier.lat, courier.lng]}
+            icon={courierIcon}
+            title="Courier"
+          />
+        )}
+        {routeUnderlay.length > 1 && (
+          <Polyline
+            positions={routeUnderlay}
+            pathOptions={{
+              color: "#ffffff",
+              weight: 9,
+              opacity: 0.9,
+              lineCap: "round",
+              lineJoin: "round",
+            }}
+          />
+        )}
+        {routeCoordinates.length > 1 && (
+          <Polyline
+            positions={routeCoordinates}
+            pathOptions={{
+              color: ROUTE_COLOR,
+              weight: 5,
+              opacity: 0.95,
+              lineCap: "round",
+              lineJoin: "round",
+              dashArray: "1 10",
+              dashOffset: "0",
+            }}
+          />
+        )}
+        <MapController
+          pickup={pickup}
+          destination={destination}
+          courier={courier}
+          routeCoordinates={routeCoordinates}
+        />
+        {onMapClick && <MapClickHandler onMapClick={onMapClick} />}
+      </MapContainer>
+      {routeLoading && (
+        <div className="pointer-events-none absolute left-1/2 top-4 z-[1000] -translate-x-1/2">
+          <div className="flex items-center gap-2 rounded-full bg-white/95 px-3.5 py-2 text-xs font-medium text-slate-600 shadow-lg ring-1 ring-slate-200">
+            <Spinner label="Calculating route" />
           </div>
-        ))}
-      </dl>
+        </div>
+      )}
+      {!routeLoading && routeError && (
+        <div className="pointer-events-none absolute bottom-4 left-1/2 z-[1000] -translate-x-1/2">
+          <div className="rounded-full bg-white/95 px-4 py-2 text-xs font-medium text-red-600 shadow-lg ring-1 ring-red-100">
+            {routeError}
+          </div>
+        </div>
+      )}
     </div>
-  )
+  );
+}
+
+function MapClickHandler({ onMapClick }) {
+  const map = useMap();
+
+  useEffect(() => {
+    const handleClick = (event) => {
+      onMapClick({
+        lat: event.latlng.lat,
+        lng: event.latlng.lng,
+      });
+    };
+
+    map.on("click", handleClick);
+
+    return () => {
+      map.off("click", handleClick);
+    };
+  }, [map, onMapClick]);
+
+  return null;
 }

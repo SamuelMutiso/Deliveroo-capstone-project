@@ -1,6 +1,5 @@
 import Input from '@/components/ui/Input'
 import PlacesAutocomplete from '@/components/map/PlacesAutocomplete'
-
 export default function OrderForm({ values, errors, categories, onChange }) {
   const set = (patch) => onChange({ ...values, ...patch })
 
