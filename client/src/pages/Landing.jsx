@@ -231,7 +231,7 @@ function RouteSection() {
         <div className="flex items-end justify-between gap-5">
           <Reveal>
             <p className="font-body text-[9px] font-semibold uppercase tracking-[0.16em] text-brand-700">
-              02 · Move
+               Move
             </p>
             <h2 className="mt-2 font-display text-[2.35rem] font-bold leading-[.9] tracking-[-0.055em] text-slate-950 sm:text-6xl">
               From here
@@ -242,7 +242,7 @@ function RouteSection() {
 
           <Reveal delay={0.08} className="hidden max-w-[190px] sm:block">
             <p className="font-body text-sm leading-5 text-slate-500">
-              Your courier follows the route in real time.
+              Your customer follows the delivery in real time.
             </p>
           </Reveal>
         </div>
@@ -302,7 +302,7 @@ function TrackingSection() {
         <div className="grid gap-6 sm:grid-cols-[.8fr_1.2fr] sm:items-end sm:gap-12">
           <Reveal>
             <p className="font-body text-[9px] font-semibold uppercase tracking-[0.16em] text-brand-300">
-              03 · Track
+              Track
             </p>
             <h2 className="mt-2 font-display text-[2.35rem] font-bold leading-[.9] tracking-[-0.055em] sm:text-6xl">
               Always know
@@ -476,7 +476,7 @@ export default function Landing() {
         <PageContainer>
           <Reveal>
             <p className="font-body text-[9px] font-semibold uppercase tracking-[0.16em] text-brand-700">
-              01 · Send
+               Send
             </p>
             <h2 className="mt-2 font-display text-[2.35rem] font-bold leading-[.9] tracking-[-0.055em] sm:text-6xl">
               Tell us where
