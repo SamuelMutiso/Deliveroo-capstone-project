@@ -1,0 +1,313 @@
+from flask import current_app
+
+from ..constants import ROLE_ADMIN
+from . import mailer, sms
+
+ORDER_CREATED = "order_created"
+COURIER_ASSIGNED = "courier_assigned"
+PICKED_UP = "picked_up"
+IN_TRANSIT = "in_transit"
+DELIVERED = "delivered"
+CANCELLED = "cancelled"
+PAYMENT_RECEIVED = "payment_received"
+
+STATUS_EVENTS = {
+    "picked_up": PICKED_UP,
+    "in_transit": IN_TRANSIT,
+    "delivered": DELIVERED,
+    "cancelled": CANCELLED,
+}
+
+
+def _money(value):
+    return f"KES {value:,.0f}"
+
+
+def _party(name, email, phone, sms_enabled=True):
+    return {"name": name or "there", "email": email, "phone": phone, "sms": sms_enabled}
+
+
+def _admins():
+    from ..models import User
+
+    return [
+        _party(admin.name, admin.notification_email, admin.phone, sms_enabled=False)
+        for admin in User.query.filter_by(role=ROLE_ADMIN, is_active=True).all()
+    ]
+
+
+def _audience(order):
+    people = {}
+
+    if order.customer:
+        people["customer"] = _party(order.customer.name, order.customer.notification_email, order.customer.phone)
+
+    people["recipient"] = _party(order.recipient_name, order.recipient_email, order.recipient_phone)
+
+    if order.courier:
+        people["courier"] = _party(order.courier.name, order.courier.notification_email, order.courier.phone)
+
+    people["admins"] = _admins()
+    return people
+
+
+def _copy(order, event):
+    """Return (subject, {audience_key: (title, [paragraphs], sms_text)}) for one event."""
+    code = order.tracking_code
+    origin = order.pickup_address
+    target = order.destination_address
+    courier_name = order.courier.name if order.courier else "A rider"
+    customer_name = order.customer.name if order.customer else "A customer"
+    total = _money(order.price_kes)
+
+    if event == ORDER_CREATED:
+        return (
+            f"Order confirmed · {code}",
+            {
+                "customer": (
+                    "Order confirmed",
+                    [
+                        f"We have your delivery request. Parcel <strong>{code}</strong> will move from "
+                        f"{origin} to {target}.",
+                        f"Total payable is {total}. We will let you know the moment a rider is assigned.",
+                    ],
+                    f"Deliveroo: order {code} confirmed, {origin} to {target}. Total {total}. "
+                    f"We will text you when a rider is assigned.",
+                ),
+                "admins": (
+                    "New order awaiting a rider",
+                    [
+                        f"{customer_name} placed order <strong>{code}</strong> ({origin} → {target}, "
+                        f"{order.distance_km} km, {total}).",
+                    ],
+                    None,
+                ),
+            },
+        )
+
+    if event == COURIER_ASSIGNED:
+        return (
+            f"A rider is on the way · {code}",
+            {
+                "customer": (
+                    "A rider is on the way",
+                    [
+                        f"{courier_name} has been assigned to parcel <strong>{code}</strong> and will "
+                        f"collect it from {origin}.",
+                    ],
+                    f"Deliveroo: {courier_name} is assigned to order {code} and will collect from {origin}.",
+                ),
+                "courier": (
+                    "New assignment",
+                    [
+                        f"Collect parcel <strong>{code}</strong> from {origin} and deliver it to "
+                        f"{target} ({order.distance_km} km).",
+                        f"Recipient is {order.recipient_name} on {order.recipient_phone}.",
+                    ],
+                    f"Deliveroo: new run {code}. Collect at {origin}, deliver to {target}. "
+                    f"Recipient {order.recipient_name} {order.recipient_phone}.",
+                ),
+                "admins": (
+                    "Rider assigned",
+                    [f"Order <strong>{code}</strong> was assigned to {courier_name}."],
+                    None,
+                ),
+            },
+        )
+
+    if event == PICKED_UP:
+        return (
+            f"Your parcel has been picked up · {code}",
+            {
+                "customer": (
+                    "Your parcel has been picked up",
+                    [f"{courier_name} collected parcel <strong>{code}</strong> and is heading to {target}."],
+                    f"Deliveroo: {courier_name} has collected parcel {code}. On the way to {target}.",
+                ),
+                "recipient": (
+                    "A parcel is on its way to you",
+                    [
+                        f"{customer_name} has sent you a parcel. <strong>{code}</strong> was just "
+                        f"collected and is on its way to {target}.",
+                    ],
+                    f"Deliveroo: {customer_name} sent you a parcel. {code} collected, on its way to {target}.",
+                ),
+            },
+        )
+
+    if event == IN_TRANSIT:
+        return (
+            f"Your parcel is in transit · {code}",
+            {
+                "customer": (
+                    "Your parcel is in transit",
+                    [
+                        f"Parcel <strong>{code}</strong> is moving towards {target}. "
+                        f"Estimated arrival in about {order.duration_min} minutes.",
+                    ],
+                    f"Deliveroo: parcel {code} is in transit to {target}, roughly "
+                    f"{order.duration_min} minutes away.",
+                ),
+                "recipient": (
+                    "Your parcel is on the road",
+                    [
+                        f"Parcel <strong>{code}</strong> is on its way to {target}, roughly "
+                        f"{order.duration_min} minutes out. {courier_name} is carrying it.",
+                    ],
+                    f"Deliveroo: your parcel {code} is on the road to {target}, about "
+                    f"{order.duration_min} minutes away.",
+                ),
+            },
+        )
+
+    if event == DELIVERED:
+        return (
+            f"Delivered · {code}",
+            {
+                "customer": (
+                    "Your parcel has been delivered",
+                    [
+                        f"Parcel <strong>{code}</strong> was delivered to {order.recipient_name} at "
+                        f"{target}. Thank you for using Deliveroo.",
+                    ],
+                    f"Deliveroo: parcel {code} delivered to {order.recipient_name} at {target}. Thank you.",
+                ),
+                "recipient": (
+                    "Your parcel has arrived",
+                    [
+                        f"Parcel <strong>{code}</strong> from {customer_name} has been delivered to "
+                        f"{target}.",
+                    ],
+                    f"Deliveroo: parcel {code} from {customer_name} has been delivered to {target}.",
+                ),
+                "courier": (
+                    "Run complete",
+                    [f"You marked <strong>{code}</strong> delivered. Nice work."],
+                    f"Deliveroo: run {code} marked delivered. Nice work.",
+                ),
+                "admins": (
+                    "Delivery completed",
+                    [f"Order <strong>{code}</strong> was delivered by {courier_name}. Value {total}."],
+                    None,
+                ),
+            },
+        )
+
+    if event == CANCELLED:
+        return (
+            f"Delivery cancelled · {code}",
+            {
+                "customer": (
+                    "Your delivery was cancelled",
+                    [
+                        f"Parcel <strong>{code}</strong> to {target} has been cancelled. "
+                        f"Nothing further will be charged.",
+                    ],
+                    f"Deliveroo: order {code} to {target} was cancelled. No further charges.",
+                ),
+                "courier": (
+                    "Run cancelled",
+                    [f"Order <strong>{code}</strong> has been cancelled. No collection needed."],
+                    f"Deliveroo: run {code} cancelled. No collection needed.",
+                ),
+                "admins": (
+                    "Order cancelled",
+                    [f"Order <strong>{code}</strong> was cancelled."],
+                    None,
+                ),
+            },
+        )
+
+    if event == PAYMENT_RECEIVED:
+        payment = order.payment
+        receipt = payment.mpesa_receipt if payment else "—"
+        return (
+            f"Payment received · {code}",
+            {
+                "customer": (
+                    "Payment received",
+                    [
+                        f"We received {total} for parcel <strong>{code}</strong>. "
+                        f"M-Pesa receipt {receipt}.",
+                    ],
+                    f"Deliveroo: payment of {total} received for {code}. M-Pesa receipt {receipt}.",
+                ),
+                "admins": (
+                    "Payment received",
+                    [f"Order <strong>{code}</strong> was paid. {total}, receipt {receipt}."],
+                    None,
+                ),
+            },
+        )
+
+    return None, {}
+
+
+def _dispatch(party, subject, title, paragraphs, sms_text, code):
+    plain = " ".join(p.replace("<strong>", "").replace("</strong>", "") for p in paragraphs)
+    mailer.send_email(subject, party.get("email"), plain, mailer.wrap_html(title, paragraphs, code))
+    if sms_text and party.get("sms") and party.get("phone"):
+        sms.send_sms(party["phone"], sms_text)
+
+
+def notify(order, event):
+    """Fan one delivery event out to every party that should hear about it."""
+    subject, copy = _copy(order, event)
+    if not subject:
+        return
+
+    people = _audience(order)
+
+    for key in ("customer", "recipient", "courier"):
+        entry = copy.get(key)
+        party = people.get(key)
+        if entry and party:
+            _dispatch(party, subject, entry[0], entry[1], entry[2], order.tracking_code)
+
+    admin_entry = copy.get("admins")
+    if admin_entry:
+        for party in people.get("admins", []):
+            _dispatch(
+                party, subject, admin_entry[0], admin_entry[1], admin_entry[2], order.tracking_code
+            )
+
+
+def notify_status(order):
+    """Map an order's current status onto its notification event."""
+    event = STATUS_EVENTS.get(order.status)
+    if event:
+        notify(order, event)
+
+
+def channel_status():
+    return {
+        "email": not current_app.config.get("MAIL_SUPPRESS_SEND", True),
+        "sms": sms.is_configured(),
+    }
+
+
+def password_reset(user, link, minutes):
+    """Send a single-use password reset link. Falls back to the log when SMTP is off."""
+    recipient = user.contact_email or user.email
+    if not recipient:
+        return False
+
+    first = (user.name or "there").split()[0]
+    title = "Reset your password"
+    paragraphs = [
+        "Hi " + first + ", we received a request to reset your Deliveroo password.",
+        "<a href='" + link + "' style='color:#0b8c64;font-weight:600'>Choose a new password</a>",
+        "This link works once and expires in " + str(minutes) + " minutes.",
+        "If you did not ask for this, ignore this email and nothing will change.",
+    ]
+    plain = (
+        "Hi " + first + ", reset your Deliveroo password here: " + link + "\n"
+        "This link works once and expires in " + str(minutes) + " minutes.\n"
+        "If you did not ask for this, ignore this email and nothing will change."
+    )
+    return mailer.send_email(
+        title,
+        recipient,
+        plain,
+        mailer.wrap_plain_html(title, paragraphs, "Deliveroo Logistics, Nairobi"),
+    )
