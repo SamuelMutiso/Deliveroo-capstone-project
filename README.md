@@ -1,239 +1,278 @@
-# Deliveroo
+# Deliveroo — how to run it
 
-A parcel delivery management platform for Nairobi. Customers book and track parcels, riders run their deliveries, and operations assign couriers and watch the network.
+Follow these steps in order. Do not skip any.
 
-Moringa School Module 6 capstone — CodeMaestros.
+You do **not** need PostgreSQL. You do **not** need a database file from anyone. You build your own database on your own machine in step 6, and it takes about ten seconds.
 
-## Team
+---
 
-| Name | Frontend | Backend |
-| --- | --- | --- |
-| Samuel Mutiso | API layer and Redux store | App factory, config, models, migrations, seed, payments and M-Pesa |
-| Alexander | Auth, profile and the admin area | Authentication, rider applications, onboarding |
-| James | The customer application | Orders and pricing |
-| Michelle | Layout shell, public site and rider screens | Maps, geocoding and the courier API |
-| David | Component library and shared hooks | Admin API and notifications |
+## Before you start
 
-## Status
+Check you have these. Run each line and make sure you get a version number back.
 
-Frontend and backend are both complete and running together. `pipenv run test` passes 82 tests. The mock API used during the first presentation has been removed; no React code changed when the real Flask API replaced it, because the mock served the same routes and the same JSON shapes.
+```bash
+node -v
+python3 --version
+git --version
+```
 
-## Stack
+You need Node 18 or newer and Python 3.11 or newer.
 
-| | |
-| --- | --- |
-| Framework | React 18 |
-| Build tool | Vite 5 |
-| State | Redux Toolkit + React Redux |
-| Routing | React Router 6 |
-| HTTP | Axios |
-| Styling | Tailwind CSS 3 |
-| Charts | Recharts |
-| Maps | Leaflet + React Leaflet, OpenStreetMap tiles |
-| Geocoding | Nominatim, proxied through the API |
-| Routing engine | OSRM, proxied through the API |
-| Dates | date-fns |
-| API | Flask 3, SQLAlchemy 2, Flask-Migrate, Flask-JWT-Extended, Marshmallow |
-| Database | SQLite locally, PostgreSQL in production |
-| Payments | M-Pesa Daraja, with a simulation fallback |
+Now check for pipenv:
 
-No map API key exists anywhere in this project. Nominatim requires a `User-Agent` that identifies the application and allows one request per second, neither of which a browser can honour, so every geocoding and routing call goes through `/api/geo/*` on the server where it can be throttled and cached.
+```bash
+pipenv --version
+```
 
-## Setting it up
+If that says "command not found", install it:
 
-You need Node 18 or newer, Python 3.11 or newer, and pipenv.
+```bash
+pip3 install --user pipenv
+```
 
-**The database is not in this repository and never will be.** `.gitignore` blocks `*.db` and `*.sqlite`. You build your own from the migrations and fill it with `seed.py`. Everyone has their own private copy — if you delete an order on your machine, nothing changes on anyone else's.
+Close the terminal, open a new one, and run `pipenv --version` again. If it still says not found, on macOS run:
 
-`.env` is not in the repository either. You copy `.env.example` and fill it in.
+```bash
+python3 -m pip install --user pipenv
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc
+source ~/.zshrc
+```
 
-### 1. The API
+---
+
+## PART ONE — the backend
+
+### Step 1. Get the latest code
+
+```bash
+git checkout development
+git pull origin development
+```
+
+### Step 2. Go into the server folder
 
 ```bash
 cd server
+```
+
+**Stay in this folder for steps 2 to 8.** Every `pipenv` command must be run from inside `server/`. If you run one from the project root it will silently create an empty environment and nothing will work.
+
+### Step 3. Install the Python packages
+
+```bash
 pipenv install --dev
+```
+
+This reads `Pipfile` and installs Flask, SQLAlchemy and everything else. It takes a minute or two the first time.
+
+### Step 4. Create your .env file
+
+```bash
 cp .env.example .env
 ```
 
-Open `server/.env` and fill in the two required keys. Any long random string works and it does not have to match anyone else's:
+### Step 5. Put two secret keys in it
+
+Run this twice and copy each result:
 
 ```bash
 python3 -c "import secrets; print(secrets.token_hex(32))"
 ```
 
+Open `server/.env` and paste one long string after each `=`:
+
 ```
-SECRET_KEY=<paste the first one>
-JWT_SECRET_KEY=<paste the second one>
+SECRET_KEY=paste_the_first_one_here
+JWT_SECRET_KEY=paste_the_second_one_here
 ```
 
-Then build the database and start:
+Save the file.
+
+**Do not change anything else in `.env`.** Everything else in there is commented out on purpose and already has a working default.
+
+**Never leave a key with nothing after the `=`.** `SECRET_KEY=` on its own is worse than deleting the line — the app will crash with an error that points somewhere completely unrelated.
+
+### Step 6. Build your database
 
 ```bash
 pipenv run upgrade
+```
+
+This creates all the tables. You should see six lines starting with `Running upgrade`, ending at `a1f6c3d94b28`.
+
+### Step 7. Fill it with test data
+
+```bash
 pipenv run seed
+```
+
+You should see:
+
+```
+Seeded 121 orders
+  users 26  couriers 15  customers 10
+  events 316
+```
+
+### Step 8. Check everything works
+
+```bash
 pipenv run test
+```
+
+It must say **82 passed**. If it does not, stop and read the "If something goes wrong" section at the bottom before doing anything else.
+
+### Step 9. Start the API
+
+```bash
 pipenv run start
 ```
 
-`upgrade` creates the tables from the migrations. `seed` fills them. `test` must report 82 passed. The API serves on http://localhost:5555.
+You should see `Running on http://127.0.0.1:5555`.
 
-`upgrade`, `seed` and `pipenv install` are only needed the first time, and again whenever someone commits a new migration.
+**Leave this terminal open and running.** Do not close it. Do not type anything else in it.
 
-### 2. The app
+To check it is alive, open this in your browser:
 
-Second terminal:
+```
+http://localhost:5555/api/health
+```
+
+Opening `http://localhost:5555` on its own gives a 404. That is normal and correct — this is an API, it has no homepage.
+
+---
+
+## PART TWO — the frontend
+
+**Open a second terminal.** The backend must keep running in the first one.
+
+### Step 10. Go into the client folder
 
 ```bash
 cd client
+```
+
+From the project root. If you are still inside `server/`, run `cd ../client`.
+
+### Step 11. Install
+
+```bash
 npm install
+```
+
+Warnings about vulnerabilities are normal. **Do not run `npm audit fix --force`.** It will break the build.
+
+### Step 12. Create the client .env
+
+```bash
 cp .env.example .env
+```
+
+You do not need to edit this one.
+
+### Step 13. Start it
+
+```bash
 npm run dev
 ```
 
-The app opens on http://localhost:5173. Both terminals must be running at once.
+You should see `Local: http://localhost:5173/`. Open that in your browser.
 
-**Vite only reads `.env` at startup.** Edit it and you must restart `npm run dev`.
+---
 
-## Signing in
+## Logging in
 
-`pipenv run seed` prints working credentials:
-
-```
-admin@deliveroo.co.ke / admin1234
-peter@deliveroo.co.ke / courier1234
-amina@deliveroo.co.ke / customer1234
-```
-
-Riders sign in with a company address because rider accounts are issued by operations on approval of an application, not self-registered. Customers sign up themselves. Admin accounts can never be created through `/register`.
-
-## Environment
-
-`server/.env` — only two keys are required:
-
-| Key | Required | Default if unset |
-| --- | --- | --- |
-| `SECRET_KEY` | yes | — |
-| `JWT_SECRET_KEY` | yes | — |
-| `DATABASE_URL` | no | local SQLite file |
-| `CLIENT_ORIGIN` | no | localhost:5173 |
-| `MAIL_*` | no | mail is logged, not sent |
-| `AT_*` | no | SMS is logged, not sent |
-| `MPESA_*` | no | payments run in simulation |
-| `NOMINATIM_URL`, `OSRM_URL` | no | the public instances |
-| `BASE_RATE_KES`, `PRICE_PER_KM_KES` | no | 180 and 42 |
-
-**Never leave a key present with nothing after the `=`.** `MAIL_PORT=` is not the same as leaving the line out. Python reads it as an empty string rather than falling back to the default, and the failure surfaces somewhere unrelated — a blank `JWT_SECRET_KEY` produces 60 test errors that all point at the login route. Comment the line out or fill it in.
-
-`client/.env`:
+These accounts come from step 7:
 
 ```
-VITE_API_BASE_URL=http://localhost:5555/api
+Admin     admin@deliveroo.co.ke     admin1234
+Courier   peter@deliveroo.co.ke     courier1234
+Customer  amina@deliveroo.co.ke     customer1234
 ```
 
-Never commit `.env`. It is gitignored, and it stays that way.
+---
 
-## What it does
+## Every day after this
 
-**Customers** book a parcel by choosing a route and a weight band, see the price broken down before committing, track the parcel live on a map, change the destination while the order is still pending, cancel any time before delivery, and pay with M-Pesa.
-
-**Riders** see only their own deliveries, go on and off duty, share their position, and move a parcel through picked up, in transit and delivered.
-
-**Operations** see every order, assign riders, override status and location, manage accounts, review rider applications, and read a dashboard of daily volume and rider performance.
-
-Screens that show a changing status re-fetch every 8 seconds, so a customer watching an order sees it update without touching anything.
-
-Prices are always computed on the server from the routed distance. The API never accepts a distance or a price from the request body.
-
-## Structure
-
-```
-client/
-  src/
-    api/          axios instance and one module per backend area
-    app/          redux store
-    features/     one slice per domain
-    components/   layout, ui, orders, map
-    pages/        one folder per role, plus the public pages
-    routes/       route table and the auth and role guards
-    hooks/        useAuth, useToast, useDebounce, useLivePoll, useLiveLocation
-    utils/        constants, formatters, validators, media
-server/
-  app/
-    models/       user, order, tracking_event, payment,
-                  courier_application, password_reset
-    resources/    auth, orders, couriers, admin, payments,
-                  applications, geo
-    schemas/      Marshmallow serialisation
-    services/     pricing, maps, mpesa, notifications, mailer, sms, onboarding
-    utils/        clock, decorators, errors, pagination
-  migrations/     Alembic
-  tests/          pytest
-  seed.py
-  wsgi.py
-```
-
-Pages never call axios directly. A page dispatches a thunk, the slice calls a module in `api/`, and the page reads the result with a selector.
-
-## Working on it
-
-Start from `development` every time:
+You only do steps 3 to 7 once. After that, to start work:
 
 ```bash
 git checkout development
 git pull origin development
-git checkout <yourname>-backend
-git merge development
 ```
 
-Every morning. Not the night before the deadline.
+Terminal 1:
 
-Commit, push, then open a pull request **into `development`**. Pushing your branch is not the same as delivering your work — nothing reaches the team until the PR is merged.
+```bash
+cd server
+pipenv run start
+```
 
-`npm run lint` runs with `--max-warnings 0`, so a warning is a failure. Run it before every pull request. `pipenv run test` must pass before you open one too.
+Terminal 2:
 
-**If you change a model, you commit a migration with it.** Run `pipenv run migrate`, check the generated file, and commit it. Without it everyone else's database is missing your column and their app breaks with an error that says nothing about you.
+```bash
+cd client
+npm run dev
+```
 
-**Every `pipenv` command runs from inside `server/`.** Run one from the repository root and pipenv creates a blank environment there instead of using ours.
+**After any `git pull`, run these two:**
 
-## Branches
+```bash
+cd server && pipenv run upgrade
+cd client && npm install
+```
 
-| Branch | Purpose |
-| --- | --- |
-| `main` | Deployment only. Nothing lands here until the final release. |
-| `development` | Integration branch. All pull requests go here. |
-| `testing` | Pull from here to test the combined work. |
-| `<name>-frontend` | Your frontend working branch. |
-| `<name>-backend` | Your backend working branch. |
+`upgrade` catches your database up if someone added a migration. `npm install` catches you up if someone added a package. Skipping them is the most common reason the app suddenly breaks after a pull.
 
-## Conventions
+---
 
-1. Tailwind only. No component CSS files. The only stylesheet is `src/styles/tailwind.css`.
-2. Colours and fonts come from `tailwind.config.js`. Never a raw hex in a component.
-3. Primary buttons are dark text on yellow — `bg-brand-400 text-brand-950`.
-4. Every page works at 390, 768, 1024 and 1440 pixels.
-5. Every list has an empty state. Every form field has an error state.
-6. Every endpoint validates with Marshmallow before it touches the database.
-7. Every endpoint that returns a list is paginated.
-8. Ownership is checked on the server, not hidden in the UI. A courier fetching another courier's delivery gets a 403.
-9. `pipenv` and the `Pipfile`. No `requirements.txt`, no global installs.
-10. Small commits.
+## If something goes wrong
 
-## When something breaks
+**`RuntimeError: JWT_SECRET_KEY or flask SECRET_KEY must be set`**
+One of them is blank in `server/.env`. Go back to step 5.
 
-**`RuntimeError: JWT_SECRET_KEY or flask SECRET_KEY must be set`** — one of them is blank in your `.env`. Fill both.
+**`ValueError: invalid literal for int() with base 10: ''`**
+A key in `.env` is present but empty. Put a `#` in front of that line or give it a value.
 
-**`ValueError: invalid literal for int()`** — a numeric key such as `MAIL_PORT` is present but empty. Comment it out or give it a value.
+**`pipenv: command not found`**
+Go back to "Before you start".
 
-**`ModuleNotFoundError` after a merge** — someone's merge overwrote a shared file with an older copy. Check `app/config.py`, `app/constants.py` and `app/extensions.py` exist before blaming anything else.
+**`ModuleNotFoundError: No module named 'flask'`**
+You ran the command from the project root instead of from inside `server/`. `cd server` and try again.
 
-**"Cannot reach the server. Is the API running?"** — terminal 1 is not running. `cd server && pipenv run start`.
+**`Address already in use` on port 5555**
+The API is already running in another terminal. Find it, or run `lsof -ti:5555 | xargs kill`.
 
-**Changes to `.env` do nothing** — restart the dev server. Vite reads it once, at startup.
+**"Cannot reach the server. Is the API running?"**
+Terminal 1 stopped. Start it again with `pipenv run start`.
 
-**Port 5555 already in use** — the API is already running in another terminal. On macOS, AirPlay Receiver holds 5000, which is why the API sits on 5555.
+**Login fails with correct details**
+You skipped `pipenv run seed`, or your database is empty. Run step 7.
 
-**A blank page after pulling** — `npm install`, then `rm -rf node_modules/.vite`, then start again.
+**The database is behaving strangely**
+Delete it and rebuild:
 
-**A local database that has gone strange** — delete `server/deliveroo.db`, then `pipenv run upgrade` and `pipenv run seed`. Ten seconds, and it fixes almost everything.
+```bash
+cd server
+rm deliveroo.db
+pipenv run upgrade
+pipenv run seed
+```
 
-**`GET /` returns 404** — correct. This is a JSON API with no homepage. `GET /api/health` is the only route that works without a token.
+**A blank white page in the browser**
+
+```bash
+cd client
+rm -rf node_modules/.vite
+npm run dev
+```
+
+**Editing `.env` changed nothing**
+Restart the terminal it belongs to. Both servers read `.env` only once, at startup.
+
+---
+
+## Two rules that stop most problems
+
+1. Every `pipenv` command runs from inside `server/`. Never from the project root.
+2. Never commit `.env`. It is gitignored. Keep it that way.
