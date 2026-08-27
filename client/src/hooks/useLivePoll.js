@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 
 const DEFAULT_INTERVAL = 8000
+const POLLING_ENABLED = false
 
 /**
  * Re-runs `callback` on an interval so the screen updates without a manual refresh.
@@ -14,7 +15,7 @@ export function useLivePoll(callback, { interval = DEFAULT_INTERVAL, enabled = t
   }, [callback])
 
   useEffect(() => {
-    if (!enabled) return undefined
+    if (!POLLING_ENABLED || !enabled) return undefined
 
     let timer = null
 
