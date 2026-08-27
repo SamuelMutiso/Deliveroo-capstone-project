@@ -18,6 +18,7 @@ import NotFound from "@/pages/NotFound";
 import OrderDetail from "@/pages/customer/OrderDetail";
 import Profile from "@/pages/customer/Profile";
 import Register from "@/pages/auth/Register";
+import ResetPassword from "@/pages/auth/ResetPassword";
 import Services from "@/pages/Services";
 import ProtectedRoute from "./ProtectedRoute";
 import RoleRoute from "./RoleRoute";
@@ -33,6 +34,7 @@ export default function AppRoutes() {
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
 
       <Route element={<ProtectedRoute />}>
         <Route path="/profile" element={<Profile />} />
