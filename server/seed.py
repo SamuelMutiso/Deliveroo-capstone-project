@@ -1,4 +1,5 @@
 import base64
+import os
 import random
 from datetime import timedelta
 
@@ -230,6 +231,9 @@ def run():
         db.create_all()
 
         admin = make_user("Ops Admin", "admin@deliveroo.co.ke", "0700000000", ROLE_ADMIN, "admin1234")
+        demo_inbox = os.getenv("DEMO_INBOX", "").strip()
+        if demo_inbox:
+            admin.contact_email = demo_inbox
         couriers = [
             make_user(name, email, phone, ROLE_COURIER, "courier1234", vehicle)
             for name, email, phone, vehicle in COURIERS
