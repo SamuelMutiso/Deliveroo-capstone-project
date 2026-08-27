@@ -22,9 +22,10 @@ def send_email(subject, recipient, body, html=None):
     app = current_app._get_current_object()
 
     if app.config.get("MAIL_SUPPRESS_SEND"):
-        app.logger.info("Email suppressed -> %s | %s", recipient, subject)
+        app.logger.warning("Email suppressed (no MAIL_USERNAME) -> %s | %s", recipient, subject)
         return False
 
+    app.logger.warning("Email sending -> %s | %s", recipient, subject)
     message = Message(subject=subject, recipients=[recipient], body=body, html=html)
     Thread(target=_send_async, args=(app, message), daemon=True).start()
     return True
