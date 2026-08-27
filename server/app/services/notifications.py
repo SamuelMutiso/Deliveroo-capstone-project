@@ -74,6 +74,16 @@ def _copy(order, event):
                     f"Deliveroo: order {code} confirmed, {origin} to {target}. Total {total}. "
                     f"We will text you when a rider is assigned.",
                 ),
+                "recipient": (
+                    "A parcel is being sent to you",
+                    [
+                        f"{customer_name} has arranged a delivery to you at {target}.",
+                        f"Your tracking reference is <strong>{code}</strong>. We will let you know "
+                        f"when a rider collects it.",
+                    ],
+                    f"Deliveroo: {customer_name} is sending you a parcel to {target}. "
+                    f"Tracking {code}.",
+                ),
                 "admins": (
                     "New order awaiting a rider",
                     [
@@ -96,6 +106,14 @@ def _copy(order, event):
                         f"collect it from {origin}.",
                     ],
                     f"Deliveroo: {courier_name} is assigned to order {code} and will collect from {origin}.",
+                ),
+                "recipient": (
+                    "A rider is collecting your parcel",
+                    [
+                        f"{courier_name} will collect parcel <strong>{code}</strong> from {origin} "
+                        f"and bring it to you at {target}.",
+                    ],
+                    f"Deliveroo: {courier_name} is collecting parcel {code} and bringing it to {target}.",
                 ),
                 "courier": (
                     "New assignment",
@@ -205,6 +223,14 @@ def _copy(order, event):
                     ],
                     f"Deliveroo: order {code} to {target} was cancelled. No further charges.",
                 ),
+                "recipient": (
+                    "A delivery to you was cancelled",
+                    [
+                        f"The parcel <strong>{code}</strong> that was on its way to {target} "
+                        f"has been cancelled by the sender.",
+                    ],
+                    f"Deliveroo: parcel {code} to {target} was cancelled by the sender.",
+                ),
                 "courier": (
                     "Run cancelled",
                     [f"Order <strong>{code}</strong> has been cancelled. No collection needed."],
@@ -231,6 +257,14 @@ def _copy(order, event):
                         f"M-Pesa receipt {receipt}.",
                     ],
                     f"Deliveroo: payment of {total} received for {code}. M-Pesa receipt {receipt}.",
+                ),
+                "recipient": (
+                    "Delivery to you is paid for",
+                    [
+                        f"The delivery of parcel <strong>{code}</strong> to {target} has been paid "
+                        f"for. Nothing is owed on arrival.",
+                    ],
+                    f"Deliveroo: delivery of {code} to {target} is paid for. Nothing owed on arrival.",
                 ),
                 "admins": (
                     "Payment received",
