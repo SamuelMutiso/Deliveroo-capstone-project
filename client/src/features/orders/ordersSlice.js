@@ -136,7 +136,7 @@ const ordersSlice = createSlice({
 
     builder
       .addCase(fetchOrders.pending, (state) => {
-        state.listStatus = 'loading'
+        if (!state.items.length) state.listStatus = 'loading'
         state.listError = null
       })
       .addCase(fetchOrders.fulfilled, (state, action) => {
@@ -150,7 +150,7 @@ const ordersSlice = createSlice({
       })
 
       .addCase(fetchOrder.pending, (state) => {
-        state.detailStatus = 'loading'
+        if (!state.current) state.detailStatus = 'loading'
         state.detailError = null
       })
       .addCase(fetchOrder.fulfilled, (state, action) => {
