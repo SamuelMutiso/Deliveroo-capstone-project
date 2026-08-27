@@ -52,6 +52,7 @@ class Config:
 
     MAIL_SERVER = os.getenv("MAIL_SERVER", "smtp.gmail.com")
     MAIL_PORT = int(os.getenv("MAIL_PORT", "587"))
+    MAIL_DEBUG = False
     MAIL_USE_TLS = _flag("MAIL_USE_TLS", "1")
     MAIL_USE_SSL = _flag("MAIL_USE_SSL", "0")
     MAIL_USERNAME = os.getenv("MAIL_USERNAME", "")
