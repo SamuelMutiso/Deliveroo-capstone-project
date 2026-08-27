@@ -107,7 +107,7 @@ const couriersSlice = createSlice({
 
     builder
       .addCase(fetchAssignments.pending, (state) => {
-        state.listStatus = 'loading'
+        if (!state.items.length) state.listStatus = 'loading'
         state.listError = null
       })
       .addCase(fetchAssignments.fulfilled, (state, action) => {
@@ -121,7 +121,7 @@ const couriersSlice = createSlice({
       })
 
       .addCase(fetchAssignment.pending, (state) => {
-        state.detailStatus = 'loading'
+        if (!state.current) state.detailStatus = 'loading'
         state.detailError = null
       })
       .addCase(fetchAssignment.fulfilled, (state, action) => {
