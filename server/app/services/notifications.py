@@ -1,6 +1,9 @@
+import re
+
 from flask import current_app
 
 from ..constants import ROLE_ADMIN
+from ..extensions import db
 from . import mailer, sms
 
 ORDER_CREATED = "order_created"
@@ -284,6 +287,39 @@ def _dispatch(party, subject, title, paragraphs, sms_text, code):
         sms.send_sms(party["phone"], sms_text)
 
 
+
+def _plain(paragraphs):
+    """Flatten the html paragraphs of one message into a single readable line."""
+    text = " ".join(paragraphs)
+    text = re.sub(r"<a [^>]*>(.*?)</a>", r"\1", text)
+    text = re.sub(r"<[^>]+>", "", text)
+    return re.sub(r"\s+", " ", text).strip()[:400]
+
+
+def _record_inapp(order, event, copy):
+    """Store a notification for every party who can sign in and read it."""
+    from ..models import Notification, User
+
+    people = {}
+    if order.customer is not None:
+        people["customer"] = order.customer
+    if order.courier is not None:
+        people["courier"] = order.courier
+
+    for key, user in people.items():
+        entry = copy.get(key)
+        if entry:
+            Notification.record(user, event, entry[0], _plain(entry[1]), order)
+
+    admin_entry = copy.get("admins")
+    if admin_entry:
+        admins = User.query.filter_by(role=ROLE_ADMIN, is_active=True).all()
+        for admin in admins:
+            Notification.record(admin, event, admin_entry[0], _plain(admin_entry[1]), order)
+
+    db.session.commit()
+
+
 def notify(order, event):
     """Fan one delivery event out to every party that should hear about it."""
     subject, copy = _copy(order, event)
@@ -304,6 +340,8 @@ def notify(order, event):
             _dispatch(
                 party, subject, admin_entry[0], admin_entry[1], admin_entry[2], order.tracking_code
             )
+
+    _record_inapp(order, event, copy)
 
 
 def notify_status(order):
