@@ -3,6 +3,7 @@ import { useDispatch } from 'react-redux'
 import { useEffect, useState } from 'react'
 
 import Button from '@/components/ui/Button'
+import NotificationBell from '@/components/layout/NotificationBell'
 import { logout } from '@/features/auth/authSlice'
 import { useAuth } from '@/hooks/useAuth'
 import { HOME_BY_ROLE, NAV_BY_ROLE, PUBLIC_NAV, ROLE_LABEL } from '@/utils/constants'
@@ -58,6 +59,7 @@ export default function Navbar() {
         <div className="flex items-center gap-2.5">
           {isAuthenticated ? (
             <>
+              <NotificationBell />
               <div className="hidden items-center gap-2.5 sm:flex">
                 <span className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-100 font-body text-sm font-bold text-brand-800">
                   {initials(user?.name)}
