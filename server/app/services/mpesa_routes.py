@@ -1,16 +1,9 @@
 from flask import Blueprint, request, jsonify
 
 from ..extensions import db
-
 from ..models.order import Order
 from ..models.payment import Payment
-
-from ..services.mpesa import (
-    stk_push,
-    parse_callback,
-    normalise_phone
-)
-
+from ..services.mpesa import stk_push
 from ..utils.clock import utcnow
 
 from ..constants import (
@@ -20,249 +13,159 @@ from ..constants import (
     PAYMENT_FAILED,
 )
 
-
-mpesa_bp = Blueprint(
-    "mpesa",
-    __name__
-)
+mpesa_bp = Blueprint("mpesa", __name__)
 
 
-# =========================================================
-# INITIATE PAYMENT
-# =========================================================
-
-@mpesa_bp.route(
-    "/api/pay",
-    methods=["POST"]
-)
-def initiate_payment():
+@mpesa_bp.route("/api/payments/<int:order_id>/mpesa", methods=["POST"])
+def initiate_payment(order_id):
 
     data = request.get_json() or {}
 
-    order_id = data.get("order_id")
     phone = data.get("phone")
 
-    # -----------------------------------------------------
-    # Validate request
-    # -----------------------------------------------------
-
-    if not order_id or not phone:
+    if not phone:
         return jsonify({
-            "message":
-                "order_id and phone are required"
+            "message": "Phone number is required"
         }), 400
 
-    # -----------------------------------------------------
+    # --------------------------------------------------------
     # Find order
-    # -----------------------------------------------------
+    # --------------------------------------------------------
 
     order = Order.query.get(order_id)
 
     if not order:
         return jsonify({
-            "message":
-                "Order not found"
+            "message": "Order not found"
         }), 404
 
-    # -----------------------------------------------------
-    # Validate amount
-    # -----------------------------------------------------
-
-    if not order.price_kes or order.price_kes <= 0:
-        return jsonify({
-            "message":
-                "Order does not have a valid payment amount."
-        }), 400
-
-    # -----------------------------------------------------
-    # Normalise phone number
-    # -----------------------------------------------------
-
-    try:
-        phone = normalise_phone(phone)
-
-    except Exception as error:
-
-        return jsonify({
-            "message": str(error)
-        }), 422
-
-    # -----------------------------------------------------
-    # Prevent duplicate payment
-    # -----------------------------------------------------
+    # Check if payment already exists
 
     if order.payment:
-
         return jsonify({
-            "message":
-                "This order already has a payment."
+            "message": "This order already has a payment",
+            "payment": {
+                "id": order.payment.id,
+                "status": order.payment.status,
+            }
         }), 400
 
-    # -----------------------------------------------------
-    # Create payment record
-    # -----------------------------------------------------
+    # Create pending payment
 
     payment = Payment(
         order_id=order.id,
-
         amount_kes=order.price_kes,
-
         method="mpesa",
-
         status=PAYMENT_PENDING,
-
-        phone=phone
+        phone=phone,
     )
 
     db.session.add(payment)
-
     db.session.commit()
 
-    # -----------------------------------------------------
     # Send STK Push
-    # -----------------------------------------------------
 
     try:
 
         result = stk_push(
             phone_number=phone,
-
             amount=order.price_kes,
-
-            reference=order.tracking_code,
-
-            description="Delivery payment"
         )
 
-        # -----------------------------------------------
-        # Daraja accepted the STK request
-        # -----------------------------------------------
+        # Store Daraja response
 
         payment.status = PAYMENT_PROCESSING
 
-        payment.checkout_request_id = (
-            result.get(
-                "checkout_request_id"
-            )
+        payment.checkout_request_id = result.get(
+            "CheckoutRequestID"
         )
 
-        payment.merchant_request_id = (
-            result.get(
-                "merchant_request_id"
-            )
+        payment.merchant_request_id = result.get(
+            "MerchantRequestID"
         )
 
-        payment.result_description = (
-            result.get(
-                "response_description"
-            )
+        payment.result_description = result.get(
+            "ResponseDescription"
         )
 
         db.session.commit()
 
         return jsonify({
-
-            "message":
-                "STK push initiated",
-
+            "message": "STK push initiated",
             "payment": {
-
-                "id":
-                    payment.id,
-
-                "status":
-                    payment.status,
-
-                "amount":
-                    payment.amount_kes,
-
-                "phone":
-                    payment.phone,
-
-                "checkout_request_id":
-                    payment.checkout_request_id,
-
-                "merchant_request_id":
-                    payment.merchant_request_id,
-
-                "customer_message":
-                    result.get(
-                        "customer_message"
-                    ),
+                "id": payment.id,
+                "order_id": payment.order_id,
+                "status": payment.status,
+                "amount": payment.amount_kes,
+                "phone": payment.phone,
+                "checkout_request_id": payment.checkout_request_id,
+                "merchant_request_id": payment.merchant_request_id,
+                "customer_message": result.get(
+                    "CustomerMessage"
+                ),
             }
-
         }), 200
 
     except Exception as error:
 
-        print(
-            "Payment initiation error:",
-            error
-        )
+        print("M-Pesa payment error:", error)
 
         payment.status = PAYMENT_FAILED
-
-        payment.result_description = str(
-            error
-        )
+        payment.result_description = str(error)
 
         db.session.commit()
 
         return jsonify({
-            "message":
-                "Failed to initiate payment",
-
-            "error":
-                str(error)
+            "message": "Failed to initiate payment",
+            "error": str(error),
         }), 500
 
+# Mpesa Callback
+# POST /mpesa/callback
 
-# =========================================================
-# MPESA CALLBACK
-# =========================================================
-
-@mpesa_bp.route(
-    "/mpesa/callback",
-    methods=["POST"]
-)
+@mpesa_bp.route("/mpesa/callback", methods=["POST"])
 def mpesa_callback():
 
     data = request.get_json() or {}
 
-    print("\n===== M-PESA CALLBACK =====")
+    print("\n================================")
+    print("       M-PESA CALLBACK")
+    print("================================")
     print(data)
 
-    # -----------------------------------------------------
-    # Parse Safaricom callback
-    # -----------------------------------------------------
+    # Extract STK callback
 
-    callback = parse_callback(data)
-
-    checkout_request_id = (
-        callback.get(
-            "checkout_request_id"
-        )
+    callback = (
+        data
+        .get("Body", {})
+        .get("stkCallback", {})
     )
 
-    result_code = (
-        callback.get(
-            "result_code"
-        )
+    checkout_request_id = callback.get(
+        "CheckoutRequestID"
     )
 
-    result_description = (
-        callback.get(
-            "result_description"
-        )
+    merchant_request_id = callback.get(
+        "MerchantRequestID"
     )
 
-    # -----------------------------------------------------
-    # Find payment
-    # -----------------------------------------------------
+    result_code = callback.get(
+        "ResultCode"
+    )
+
+    result_description = callback.get(
+        "ResultDesc"
+    )
+
+    print("CheckoutRequestID:", checkout_request_id)
+    print("MerchantRequestID:", merchant_request_id)
+    print("ResultCode:", result_code)
+    print("ResultDesc:", result_description)
+
+    # Find payment using CheckoutRequestID
 
     payment = Payment.query.filter_by(
-        checkout_request_id=
-            checkout_request_id
+        checkout_request_id=checkout_request_id
     ).first()
 
     if not payment:
@@ -272,24 +175,42 @@ def mpesa_callback():
             checkout_request_id
         )
 
+        # Still acknowledge callback to Safaricom
         return jsonify({
             "ResultCode": 0,
-            "ResultDesc":
-                "Callback received"
+            "ResultDesc": "Callback received"
         }), 200
 
-    # =====================================================
-    # SUCCESS
-    # =====================================================
+    # Success
 
     if result_code == 0:
 
+        items = (
+            callback
+            .get("CallbackMetadata", {})
+            .get("Item", [])
+        )
+
+        payment_data = {}
+
+        for item in items:
+
+            name = item.get("Name")
+
+            if name:
+                payment_data[name] = item.get("Value")
+
+        # Save payment information
+
         payment.status = PAYMENT_PAID
 
-        payment.mpesa_receipt = (
-            callback.get(
-                "receipt"
-            )
+        payment.mpesa_receipt = payment_data.get(
+            "MpesaReceiptNumber"
+        )
+
+        payment.phone = payment_data.get(
+            "PhoneNumber",
+            payment.phone
         )
 
         payment.result_description = (
@@ -300,34 +221,22 @@ def mpesa_callback():
 
         payment.paid_at = utcnow()
 
-        print(
-            "\n===== PAYMENT SUCCESSFUL ====="
-        )
-
-        print(
-            "Amount:",
-            callback.get("amount")
-        )
-
+        print("\n===== PAYMENT SUCCESSFUL =====")
+        print("Amount:", payment_data.get("Amount"))
         print(
             "Receipt:",
-            callback.get("receipt")
+            payment_data.get("MpesaReceiptNumber")
         )
-
         print(
             "Phone:",
-            callback.get("phone")
+            payment_data.get("PhoneNumber")
         )
-
         print(
-            "Date:",
-            callback.get("transaction_date")
+            "Transaction Date:",
+            payment_data.get("TransactionDate")
         )
 
-    # =====================================================
     # FAILURE
-    # =====================================================
-
     else:
 
         payment.status = PAYMENT_FAILED
@@ -338,35 +247,18 @@ def mpesa_callback():
 
         payment.raw_callback = data
 
-        print(
-            "\n===== PAYMENT FAILED ====="
-        )
-
-        print(
-            "Result code:",
-            result_code
-        )
-
+        print("\n===== PAYMENT FAILED =====")
         print(
             "Reason:",
             result_description
         )
-
-    # -----------------------------------------------------
-    # Save payment
-    # -----------------------------------------------------
-
+    # Save everything
     db.session.commit()
 
-    # -----------------------------------------------------
-    # Tell Safaricom we received callback
-    # -----------------------------------------------------
+    
+    # Tell Safaricom callback was received
 
     return jsonify({
-
         "ResultCode": 0,
-
-        "ResultDesc":
-            "Callback received successfully"
-
+        "ResultDesc": "Callback received successfully"
     }), 200
