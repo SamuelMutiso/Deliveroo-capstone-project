@@ -25,7 +25,6 @@ import {
   selectStatsError,
   selectStatsStatus,
 } from '@/features/admin/adminSlice'
-import { useLivePoll } from '@/hooks/useLivePoll'
 import { STATUS_META } from '@/utils/constants'
 import { money, shortDate } from '@/utils/formatters'
 
@@ -46,8 +45,6 @@ export default function AdminDashboard() {
   useEffect(() => {
     dispatch(fetchStats())
   }, [dispatch])
-
-  useLivePoll(() => dispatch(fetchStats()))
 
   if (status === 'loading' || status === 'idle') {
     return (

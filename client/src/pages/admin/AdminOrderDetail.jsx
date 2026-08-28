@@ -28,7 +28,6 @@ import {
 } from '@/features/admin/adminSlice'
 import { STATUS_META } from '@/utils/constants'
 import { distance, duration, fullDate, money } from '@/utils/formatters'
-import { useLivePoll } from '@/hooks/useLivePoll'
 import { useToast } from '@/hooks/useToast'
 
 const STATUS_OPTIONS = Object.entries(STATUS_META).map(([value, meta]) => ({
@@ -58,11 +57,6 @@ export default function AdminOrderDetail() {
     dispatch(fetchAdminOrder(id))
     dispatch(fetchCouriers())
   }, [dispatch, id])
-
-  useLivePoll(() => {
-    dispatch(fetchAdminOrder(id))
-    dispatch(fetchCouriers())
-  })
 
   const orderId = order?.id ?? null
   const serverCourierId = order?.courier?.id ?? null
