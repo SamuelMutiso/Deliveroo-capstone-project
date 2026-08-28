@@ -13,6 +13,7 @@ from .courier_application_schema import (
     courier_application_create_schema,
     courier_application_schema,
 )
+from .notification_schema import notification_schema
 from .payment_schema import checkout_schema, payment_schema
 from .tracking_schema import tracking_event_schema
 from .user_schema import (
