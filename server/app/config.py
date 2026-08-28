@@ -58,7 +58,10 @@ class Config:
     MAIL_USERNAME = os.getenv("MAIL_USERNAME", "")
     MAIL_PASSWORD = os.getenv("MAIL_PASSWORD", "")
     MAIL_DEFAULT_SENDER = os.getenv("MAIL_DEFAULT_SENDER", "Deliveroo <no-reply@deliveroo.co.ke>")
-    MAIL_SUPPRESS_SEND = not bool(os.getenv("MAIL_USERNAME", ""))
+    MAIL_SUPPRESS_SEND = not bool(os.getenv("MAIL_USERNAME", "")) and not bool(
+        os.getenv("BREVO_API_KEY", "")
+    )
+    BREVO_API_KEY = os.getenv("BREVO_API_KEY", "")
 
     AT_ENV = os.getenv("AT_ENV", "sandbox")
     AT_USERNAME = os.getenv("AT_USERNAME", "")
@@ -85,6 +88,8 @@ class DevelopmentConfig(Config):
 
 class TestingConfig(Config):
     TESTING = True
+    MPESA_CONSUMER_KEY = ""
+    MPESA_CONSUMER_SECRET = ""
     GEO_OFFLINE = True
     BCRYPT_LOG_ROUNDS = 4
     SQLALCHEMY_DATABASE_URI = "sqlite://"
