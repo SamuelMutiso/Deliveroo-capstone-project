@@ -3,6 +3,7 @@ from .applications import applications_bp
 from .auth import auth_bp
 from .couriers import couriers_bp
 from .geo import geo_bp
+from .notifications import notifications_bp
 from .orders import orders_bp
 from .payments import payments_bp
 
@@ -14,6 +15,7 @@ BLUEPRINTS = (
     payments_bp,
     applications_bp,
     geo_bp,
+    notifications_bp,
 )
 
 __all__ = [
@@ -23,6 +25,7 @@ __all__ = [
     "auth_bp",
     "couriers_bp",
     "geo_bp",
+    "notifications_bp",
     "orders_bp",
     "payments_bp",
 ]
