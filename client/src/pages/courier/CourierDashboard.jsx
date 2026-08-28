@@ -28,7 +28,6 @@ import { STATUS_META } from '@/utils/constants'
 import { distance } from '@/utils/formatters'
 import { restoreSession } from '@/features/auth/authSlice'
 import { useAuth } from '@/hooks/useAuth'
-import { useLivePoll } from '@/hooks/useLivePoll'
 import { useToast } from '@/hooks/useToast'
 
 const STATUS_OPTIONS = [
@@ -57,17 +56,6 @@ export default function CourierDashboard() {
   useEffect(() => {
     dispatch(hydrateAvailability(user?.is_available))
   }, [dispatch, user?.is_available])
-
-  useLivePoll(() => {
-    dispatch(fetchCourierStats())
-    dispatch(
-      fetchAssignments({
-        page: filters.page,
-        per_page: 6,
-        status: filters.status || undefined,
-      }),
-    )
-  })
 
   const toggleAvailability = async () => {
     const next = !isAvailable

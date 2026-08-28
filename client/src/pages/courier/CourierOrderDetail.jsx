@@ -24,7 +24,6 @@ import {
 import { NEXT_STAGE, STATUS, STATUS_META } from '@/utils/constants'
 import { distance, duration, fullDate, money } from '@/utils/formatters'
 import { useLiveLocation } from '@/hooks/useLiveLocation'
-import { useLivePoll } from '@/hooks/useLivePoll'
 import { useToast } from '@/hooks/useToast'
 
 export default function CourierOrderDetail() {
@@ -45,8 +44,6 @@ export default function CourierOrderDetail() {
   useEffect(() => {
     dispatch(fetchAssignment(id))
   }, [dispatch, id])
-
-  useLivePoll(() => dispatch(fetchAssignment(id)))
 
   const live = useLiveLocation((point) => {
     dispatch(pushLocation({ id, lat: point.lat, lng: point.lng, note: 'Live position' }))
