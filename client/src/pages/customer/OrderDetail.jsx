@@ -44,7 +44,6 @@ import {
   money,
 } from "@/utils/formatters";
 import { validatePhone } from "@/utils/validators";
-import { useLivePoll } from "@/hooks/useLivePoll";
 import { useToast } from "@/hooks/useToast";
 
 export default function OrderDetail() {
@@ -70,11 +69,6 @@ export default function OrderDetail() {
   const [nextDestination, setNextDestination] = useState(null);
   const [phone, setPhone] = useState("");
   const [phoneError, setPhoneError] = useState(null);
-
-  useLivePoll(() => {
-    dispatch(fetchOrder(id));
-    dispatch(fetchPayment(id));
-  });
 
   useEffect(() => {
     dispatch(fetchOrder(id));
