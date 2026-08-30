@@ -203,7 +203,7 @@ def list_couriers():
 def _availability(courier, active_orders):
     if not courier.is_available:
         return "offline"
-    if active_orders >= 3:
+    if active_orders >= 1:
         return "busy"
     return "available"
 
