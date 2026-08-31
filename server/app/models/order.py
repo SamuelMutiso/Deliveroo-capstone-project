@@ -69,6 +69,8 @@ class Order(db.Model):
     rating_comment = db.Column(db.String(400))
     rated_at = db.Column(db.DateTime)
 
+    receipt_sent_at = db.Column(db.DateTime)
+
     delivered_at = db.Column(db.DateTime)
     cancelled_at = db.Column(db.DateTime)
 
