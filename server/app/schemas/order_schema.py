@@ -41,6 +41,11 @@ class OrderSchema(Schema):
     is_editable = fields.Bool(dump_only=True)
     is_cancellable = fields.Bool(dump_only=True)
 
+    received_by = fields.Str(dump_only=True, allow_none=True)
+    rating = fields.Int(dump_only=True, allow_none=True)
+    rating_comment = fields.Str(dump_only=True, allow_none=True)
+    rated_at = fields.DateTime(dump_only=True, allow_none=True)
+
     customer = fields.Nested(UserSummarySchema, dump_only=True)
     courier = fields.Nested(UserSummarySchema, dump_only=True, allow_none=True)
     payment_status = fields.Method("resolve_payment_status", dump_only=True)
@@ -92,6 +97,14 @@ class LocationUpdateSchema(Schema):
 class StatusUpdateSchema(Schema):
     status = fields.Str(required=True, validate=validate.OneOf(list(ORDER_STATUSES)))
     note = fields.Str(load_default=None, allow_none=True, validate=validate.Length(max=255))
+    received_by = fields.Str(
+        load_default=None, allow_none=True, validate=validate.Length(max=120)
+    )
+
+
+class RatingSchema(Schema):
+    rating = fields.Int(required=True, validate=validate.Range(min=1, max=5))
+    comment = fields.Str(load_default=None, allow_none=True, validate=validate.Length(max=400))
 
 
 class AssignCourierSchema(Schema):
@@ -115,3 +128,5 @@ location_update_schema = LocationUpdateSchema()
 status_update_schema = StatusUpdateSchema()
 assign_courier_schema = AssignCourierSchema()
 quote_schema = QuoteSchema()
+
+rating_schema = RatingSchema()

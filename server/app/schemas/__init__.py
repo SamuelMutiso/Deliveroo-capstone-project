@@ -6,6 +6,7 @@ from .order_schema import (
     order_detail_schema,
     order_schema,
     quote_schema,
+    rating_schema,
     status_update_schema,
 )
 from .courier_application_schema import (
