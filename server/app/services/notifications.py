@@ -153,6 +153,11 @@ def _copy(order, event):
                     ],
                     f"Deliveroo: {customer_name} sent you a parcel. {code} collected, on its way to {target}.",
                 ),
+                "admins": (
+                    "Parcel collected",
+                    [f"{courier_name} collected order <strong>{code}</strong> from {origin}."],
+                    None,
+                ),
             },
         )
 
@@ -177,6 +182,14 @@ def _copy(order, event):
                     ],
                     f"Deliveroo: your parcel {code} is on the road to {target}, about "
                     f"{order.duration_min} minutes away.",
+                ),
+                "admins": (
+                    "Parcel in transit",
+                    [
+                        f"Order <strong>{code}</strong> is on the road to {target} with "
+                        f"{courier_name}, about {order.duration_min} minutes out.",
+                    ],
+                    None,
                 ),
             },
         )
