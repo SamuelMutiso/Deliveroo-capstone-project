@@ -5,6 +5,9 @@ import { useEffect, useState } from "react";
 import Button from "@/components/ui/Button";
 import ErrorMessage from "@/components/ui/ErrorMessage";
 import Input from "@/components/ui/Input";
+import { FileText } from "lucide-react";
+
+import LiveTrackingBar from "@/components/orders/LiveTrackingBar";
 import MapView from "@/components/map/MapView";
 import Modal from "@/components/ui/Modal";
 import OrderTimeline from "@/components/orders/OrderTimeline";
@@ -172,6 +175,13 @@ export default function OrderDetail() {
         <div className="flex flex-wrap items-center gap-2.5">
           <StatusBadge status={order.status} />
           <PaymentBadge status={payment?.status || order.payment_status} />
+          <Link
+            to={`/orders/${order.id}/receipt`}
+            className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3.5 py-1.5 font-body text-sm font-semibold text-slate-700 transition hover:bg-slate-200"
+          >
+            <FileText className="h-3.5 w-3.5" aria-hidden="true" />
+            Receipt
+          </Link>
         </div>
       </div>
 
@@ -187,6 +197,14 @@ export default function OrderDetail() {
 
       <div className="mt-6 grid gap-12 lg:grid-cols-[1.35fr_1fr]">
         <div className="flex flex-col gap-6">
+          <LiveTrackingBar
+            order={order}
+            onRefresh={() => {
+              dispatch(fetchOrder(id));
+              dispatch(fetchPayment(id));
+            }}
+          />
+
           <MapView
             pickup={{ lat: order.pickup_lat, lng: order.pickup_lng }}
             destination={{
