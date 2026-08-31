@@ -36,3 +36,19 @@
     overflow: hidden;
   }
 }
+
+@media print {
+  header[class*="sticky"],
+  footer,
+  .print\:hidden {
+    display: none !important;
+  }
+
+  body {
+    background: #ffffff;
+  }
+
+  main {
+    padding: 0 !important;
+  }
+}
