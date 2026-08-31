@@ -2,6 +2,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { useEffect } from 'react'
 
 import Button from '@/components/ui/Button'
+import EarningsPanel from '@/components/courier/EarningsPanel'
 import EmptyState from '@/components/ui/EmptyState'
 import ErrorMessage from '@/components/ui/ErrorMessage'
 import OrderCard from '@/components/orders/OrderCard'
@@ -104,6 +105,8 @@ export default function CourierDashboard() {
           caption="delivered distance"
         />
       </div>
+
+      <EarningsPanel stats={stats} />
 
       <div className="mt-6 flex justify-end">
         <Select
