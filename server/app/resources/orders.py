@@ -6,6 +6,7 @@ from ..constants import (
     ORDER_STATUSES,
     ROLE_COURIER,
     STATUS_CANCELLED,
+    STATUS_DELIVERED,
     STATUS_PENDING,
     TERMINAL_STATUSES,
     WEIGHT_CATEGORIES,
@@ -18,9 +19,11 @@ from ..schemas import (
     order_detail_schema,
     order_schema,
     quote_schema,
+    rating_schema,
     tracking_event_schema,
 )
 from ..services import maps, notifications, pricing
+from ..utils.clock import utcnow
 from ..utils.decorators import current_user, customer_required, owned_order_or_404
 from ..utils.errors import ApiError
 from ..utils.pagination import paginate
@@ -236,4 +239,26 @@ def cancel_order(order_id):
     db.session.commit()
 
     notifications.notify_status(order)
+    return {"order": order_detail_schema.dump(order)}
+
+
+@orders_bp.post("/<int:order_id>/rating")
+@customer_required
+def rate_delivery(order_id):
+    """Rate a completed delivery. One rating per order, and only once it has arrived."""
+    user = current_user()
+    order = owned_order_or_404(order_id, user)
+
+    if order.status != STATUS_DELIVERED:
+        raise ApiError("You can only rate a delivery once it has arrived", 409)
+    if order.rating is not None:
+        raise ApiError("This delivery has already been rated", 409)
+
+    data = rating_schema.load(request.get_json() or {})
+
+    order.rating = data["rating"]
+    order.rating_comment = (data.get("comment") or "").strip() or None
+    order.rated_at = utcnow()
+    db.session.commit()
+
     return {"order": order_detail_schema.dump(order)}
