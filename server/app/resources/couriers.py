@@ -72,7 +72,14 @@ def advance_status(order_id):
         raise ApiError(f"From {order.status} a courier can only move to {readable}", 409)
 
     order.mark_status(target)
-    TrackingEvent.record(order, target, data.get("note"), actor=user)
+    if target == STATUS_DELIVERED and data.get("received_by"):
+        order.received_by = data["received_by"].strip()
+
+    note = data.get("note")
+    if target == STATUS_DELIVERED and order.received_by and not note:
+        note = f"Received by {order.received_by}"
+
+    TrackingEvent.record(order, target, note, actor=user)
     db.session.commit()
 
     notifications.notify_status(order)
@@ -212,7 +219,18 @@ def courier_stats():
             }
         )
 
+    rating_row = (
+        db.session.query(func.avg(Order.rating), func.count(Order.rating))
+        .filter(Order.courier_id == user.id, Order.rating.isnot(None))
+        .first()
+    )
+    rating_average, rating_count = rating_row or (None, 0)
+
     return {
+        "rating": {
+            "average": round(float(rating_average), 2) if rating_average is not None else None,
+            "count": int(rating_count or 0),
+        },
         "assigned_total": sum(by_status.values()),
         "active": by_status[STATUS_PICKED_UP] + by_status[STATUS_IN_TRANSIT],
         "delivered": by_status[STATUS_DELIVERED],
