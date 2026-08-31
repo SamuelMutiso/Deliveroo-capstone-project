@@ -63,6 +63,12 @@ class Order(db.Model):
     created_at = db.Column(db.DateTime, default=utcnow, nullable=False, index=True)
     updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow)
     picked_up_at = db.Column(db.DateTime)
+    received_by = db.Column(db.String(120))
+
+    rating = db.Column(db.Integer)
+    rating_comment = db.Column(db.String(400))
+    rated_at = db.Column(db.DateTime)
+
     delivered_at = db.Column(db.DateTime)
     cancelled_at = db.Column(db.DateTime)
 
