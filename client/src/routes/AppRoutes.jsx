@@ -21,6 +21,7 @@ import Profile from "@/pages/customer/Profile";
 import Register from "@/pages/auth/Register";
 import ResetPassword from "@/pages/auth/ResetPassword";
 import Services from "@/pages/Services";
+import VerifyReceipt from "@/pages/VerifyReceipt";
 import ProtectedRoute from "./ProtectedRoute";
 import RoleRoute from "./RoleRoute";
 import { ROLES } from "@/utils/constants";
@@ -30,6 +31,7 @@ export default function AppRoutes() {
     <Routes>
       <Route path="/about" element={<About />} />
       <Route path="/services" element={<Services />} />
+      <Route path="/verify" element={<VerifyReceipt />} />
 
       {/* Authentication */}
       <Route path="/login" element={<Login />} />
