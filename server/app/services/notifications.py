@@ -4,7 +4,8 @@ from flask import current_app
 
 from ..constants import ROLE_ADMIN
 from ..extensions import db
-from . import mailer, sms
+from ..utils.clock import utcnow
+from . import mailer, receipts, sms
 
 ORDER_CREATED = "order_created"
 COURIER_ASSIGNED = "courier_assigned"
@@ -333,6 +334,88 @@ def _record_inapp(order, event, copy):
     db.session.commit()
 
 
+
+def _client_base():
+    origins = current_app.config.get("CLIENT_ORIGINS") or ["http://localhost:5173"]
+    return origins[0].rstrip("/")
+
+
+def delivery_receipt(order):
+    """Email the final receipt once the parcel has arrived and the money has cleared."""
+    if order.status != "delivered":
+        return False
+    if order.payment is None or order.payment.status != "paid":
+        return False
+    if order.receipt_sent_at is not None:
+        return False
+
+    reference = receipts.reference_for(order)
+    base = _client_base()
+    lines = (order.price_breakdown or {}).get("lines") or []
+
+    rows = "".join(
+        "<tr>"
+        f"<td style='padding:6px 0;color:#475569;font-size:14px'>{line.get('label')}</td>"
+        f"<td style='padding:6px 0;text-align:right;font-size:14px'>{_money(line.get('amount', 0))}</td>"
+        "</tr>"
+        for line in lines
+        if line.get("amount")
+    )
+
+    detail = (
+        f"<table style='width:100%;border-collapse:collapse'>{rows}"
+        "<tr><td style='padding:10px 0 0;border-top:1px solid #e2e8f0;font-weight:700;font-size:14px'>Total paid</td>"
+        f"<td style='padding:10px 0 0;border-top:1px solid #e2e8f0;text-align:right;font-weight:700;font-size:14px'>{_money(order.price_kes)}</td></tr>"
+        "</table>"
+    )
+
+    paragraphs = [
+        f"Parcel <strong>{order.tracking_code}</strong> was delivered to "
+        f"{order.destination_address} on {order.delivered_at:%d %B %Y at %H:%M}.",
+        f"<strong>Sent by</strong> {order.customer.name if order.customer else 'a customer'}"
+        + (f" · {order.customer.phone}" if order.customer and order.customer.phone else ""),
+        f"<strong>Received by</strong> {order.received_by or order.recipient_name}"
+        + (f" · {order.recipient_phone}" if order.recipient_phone else ""),
+        f"<strong>Delivered by</strong> {order.courier.name if order.courier else 'our rider'}"
+        + (f" · {order.courier.vehicle}" if order.courier and order.courier.vehicle else ""),
+        detail,
+        f"M-Pesa receipt {order.payment.mpesa_receipt or '—'}.",
+        f"<a href='{base}/orders/{order.id}/receipt' style='color:#9c5f02;font-weight:600'>"
+        "View or download the full receipt</a>",
+    ]
+
+    plain = (
+        f"Parcel {order.tracking_code} was delivered to {order.destination_address}.\n"
+        f"Received by {order.received_by or order.recipient_name}.\n"
+        f"Delivered by {order.courier.name if order.courier else 'our rider'}.\n"
+        f"Total paid {_money(order.price_kes)}. M-Pesa receipt {order.payment.mpesa_receipt or '-'}.\n"
+        f"Document reference {reference}\n"
+        f"Verify at {base}/verify"
+    )
+
+    footer = (
+        f"Document reference {reference} · Verify this receipt at {base}/verify · "
+        "Deliveroo Logistics Kenya Ltd, Nairobi"
+    )
+
+    html = mailer.wrap_html(
+        "Delivery complete", paragraphs, order.tracking_code, footer=footer
+    )
+
+    recipients = []
+    if order.customer is not None and order.customer.notification_email:
+        recipients.append(order.customer.notification_email)
+    if order.recipient_email and order.recipient_email not in recipients:
+        recipients.append(order.recipient_email)
+
+    for address in recipients:
+        mailer.send_email(f"Receipt · {order.tracking_code}", address, plain, html)
+
+    order.receipt_sent_at = utcnow()
+    db.session.commit()
+    return True
+
+
 def notify(order, event):
     """Fan one delivery event out to every party that should hear about it."""
     subject, copy = _copy(order, event)
@@ -355,6 +438,9 @@ def notify(order, event):
             )
 
     _record_inapp(order, event, copy)
+
+    if event in (DELIVERED, PAYMENT_RECEIVED):
+        delivery_receipt(order)
 
 
 def notify_status(order):
