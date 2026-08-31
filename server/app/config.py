@@ -77,6 +77,7 @@ class Config:
 
     BASE_RATE_KES = float(os.getenv("BASE_RATE_KES", "180"))
     PRICE_PER_KM_KES = float(os.getenv("PRICE_PER_KM_KES", "42"))
+    COURIER_COMMISSION_RATE = float(os.getenv("COURIER_COMMISSION_RATE", "0.7"))
 
     DEFAULT_PAGE_SIZE = 10
     MAX_PAGE_SIZE = 50

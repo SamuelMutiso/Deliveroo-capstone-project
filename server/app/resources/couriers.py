@@ -1,7 +1,7 @@
 from datetime import timedelta
 
-from flask import Blueprint, request
-from sqlalchemy import func
+from flask import Blueprint, current_app, request
+from sqlalchemy import Date, cast, func
 
 from ..constants import (
     COURIER_TRANSITIONS,
@@ -156,6 +156,59 @@ def courier_stats():
         or 0.0
     )
 
+    rate = float(current_app.config.get("COURIER_COMMISSION_RATE", 0.7))
+    now = utcnow()
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    month_start = today_start.replace(day=1)
+
+    def earned_since(moment):
+        total = (
+            db.session.query(func.coalesce(func.sum(Order.price_kes), 0.0))
+            .filter(
+                Order.courier_id == user.id,
+                Order.status == STATUS_DELIVERED,
+                Order.delivered_at >= moment,
+            )
+            .scalar()
+            or 0.0
+        )
+        return round(float(total) * rate, 2)
+
+    lifetime = (
+        db.session.query(func.coalesce(func.sum(Order.price_kes), 0.0))
+        .filter(Order.courier_id == user.id, Order.status == STATUS_DELIVERED)
+        .scalar()
+        or 0.0
+    )
+
+    rows = (
+        db.session.query(
+            cast(Order.delivered_at, Date).label("day"),
+            func.count(Order.id),
+            func.coalesce(func.sum(Order.price_kes), 0.0),
+        )
+        .filter(
+            Order.courier_id == user.id,
+            Order.status == STATUS_DELIVERED,
+            Order.delivered_at >= today_start - timedelta(days=6),
+        )
+        .group_by("day")
+        .all()
+    )
+    by_day = {str(day): (count, float(total)) for day, count, total in rows}
+
+    daily = []
+    for offset in range(6, -1, -1):
+        day = (today_start - timedelta(days=offset)).date()
+        count, total = by_day.get(str(day), (0, 0.0))
+        daily.append(
+            {
+                "date": day.isoformat(),
+                "deliveries": count,
+                "earnings_kes": round(total * rate, 2),
+            }
+        )
+
     return {
         "assigned_total": sum(by_status.values()),
         "active": by_status[STATUS_PICKED_UP] + by_status[STATUS_IN_TRANSIT],
@@ -163,4 +216,12 @@ def courier_stats():
         "delivered_this_week": delivered_this_week,
         "distance_km": round(float(distance), 1),
         "by_status": by_status,
+        "commission_rate": rate,
+        "earnings": {
+            "today": earned_since(today_start),
+            "week": earned_since(today_start - timedelta(days=6)),
+            "month": earned_since(month_start),
+            "lifetime": round(float(lifetime) * rate, 2),
+        },
+        "daily": daily,
     }
