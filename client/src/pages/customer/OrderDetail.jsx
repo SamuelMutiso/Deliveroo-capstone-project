@@ -8,6 +8,7 @@ import Input from "@/components/ui/Input";
 import { FileText } from "lucide-react";
 
 import LiveTrackingBar from "@/components/orders/LiveTrackingBar";
+import RateDelivery from "@/components/orders/RateDelivery";
 import MapView from "@/components/map/MapView";
 import Modal from "@/components/ui/Modal";
 import OrderTimeline from "@/components/orders/OrderTimeline";
@@ -218,6 +219,8 @@ export default function OrderDetail() {
             }
             polyline={order.route_polyline}
           />
+
+          <RateDelivery order={order} />
 
           <Panel title="Route">
             <div className="flex flex-col gap-3.5">
