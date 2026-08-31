@@ -22,7 +22,7 @@ from ..schemas import (
     rating_schema,
     tracking_event_schema,
 )
-from ..services import maps, notifications, pricing
+from ..services import maps, notifications, pricing, receipts
 from ..utils.clock import utcnow
 from ..utils.decorators import current_user, customer_required, owned_order_or_404
 from ..utils.errors import ApiError
@@ -262,3 +262,28 @@ def rate_delivery(order_id):
     db.session.commit()
 
     return {"order": order_detail_schema.dump(order)}
+
+
+@orders_bp.get("/verify/<reference>")
+def verify_receipt(reference):
+    """Public check that a printed receipt reference is genuine. Deliberately sparse."""
+    tracking_code, digest = receipts.split_reference(reference)
+    if not tracking_code or not digest:
+        return {"valid": False, "reason": "That reference is not in the expected format"}, 200
+
+    order = Order.query.filter_by(tracking_code=tracking_code).first()
+
+    if order is None or order.status != STATUS_DELIVERED or not receipts.matches(order, digest):
+        return {"valid": False, "reason": "No delivered parcel matches that reference"}, 200
+
+    return {
+        "valid": True,
+        "receipt": {
+            "tracking_code": order.tracking_code,
+            "delivered_at": order.delivered_at.isoformat() if order.delivered_at else None,
+            "received_by": order.received_by or order.recipient_name,
+            "courier": order.courier.name if order.courier else None,
+            "amount_kes": order.price_kes,
+            "payment_status": order.payment.status if order.payment else "unpaid",
+        },
+    }
