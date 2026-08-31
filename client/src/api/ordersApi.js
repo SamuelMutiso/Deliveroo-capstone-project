@@ -11,6 +11,7 @@ export const ordersApi = {
   changeDestination: (id, payload) =>
     axiosClient.patch(`/orders/${id}/destination`, payload).then((r) => r.data),
   cancel: (id) => axiosClient.patch(`/orders/${id}/cancel`).then((r) => r.data),
+  rate: (id, payload) => axiosClient.post(`/orders/${id}/rating`, payload).then((r) => r.data),
 }
 
 export const courierApi = {

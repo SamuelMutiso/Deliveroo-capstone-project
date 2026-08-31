@@ -101,6 +101,17 @@ export const cancelOrder = createAsyncThunk('orders/cancel', async (id, { reject
   }
 })
 
+export const rateOrder = createAsyncThunk(
+  'orders/rate',
+  async ({ id, rating, comment }, { rejectWithValue }) => {
+    try {
+      return await ordersApi.rate(id, { rating, comment })
+    } catch (error) {
+      return rejectWithValue(extractError(error, 'Could not save your rating'))
+    }
+  },
+)
+
 const ordersSlice = createSlice({
   name: 'orders',
   initialState,
@@ -168,6 +179,19 @@ const ordersSlice = createSlice({
 
       .addCase(fetchAvailableCouriers.fulfilled, (state, action) => {
         state.couriers = action.payload
+      })
+
+      .addCase(rateOrder.pending, (state) => {
+        state.saving = true
+        state.saveError = null
+      })
+      .addCase(rateOrder.fulfilled, (state, action) => {
+        state.saving = false
+        state.current = action.payload.order
+      })
+      .addCase(rateOrder.rejected, (state, action) => {
+        state.saving = false
+        state.saveError = action.payload
       })
 
       .addCase(fetchQuote.pending, (state) => {
