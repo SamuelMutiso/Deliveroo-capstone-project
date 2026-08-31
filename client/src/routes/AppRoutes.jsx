@@ -16,6 +16,7 @@ import ForgotPassword from "@/pages/auth/ForgotPassword";
 import NewOrder from "@/pages/customer/NewOrder";
 import NotFound from "@/pages/NotFound";
 import OrderDetail from "@/pages/customer/OrderDetail";
+import OrderReceipt from "@/pages/customer/OrderReceipt";
 import Profile from "@/pages/customer/Profile";
 import Register from "@/pages/auth/Register";
 import ResetPassword from "@/pages/auth/ResetPassword";
@@ -45,6 +46,8 @@ export default function AppRoutes() {
           <Route path="/orders/new" element={<NewOrder />} />
 
           <Route path="/orders/:id" element={<OrderDetail />} />
+
+          <Route path="/orders/:id/receipt" element={<OrderReceipt />} />
 
           <Route path="/become-a-rider" element={<BecomeCourier />} />
         </Route>
