@@ -1,7 +1,7 @@
 from datetime import timedelta
 
 from flask import Blueprint, current_app, request
-from sqlalchemy import Date, cast, func
+from sqlalchemy import func
 
 from ..constants import (
     COURIER_TRANSITIONS,
@@ -181,26 +181,29 @@ def courier_stats():
         or 0.0
     )
 
-    rows = (
-        db.session.query(
-            cast(Order.delivered_at, Date).label("day"),
-            func.count(Order.id),
-            func.coalesce(func.sum(Order.price_kes), 0.0),
-        )
+    window_start = today_start - timedelta(days=6)
+    recent = (
+        db.session.query(Order.delivered_at, Order.price_kes)
         .filter(
             Order.courier_id == user.id,
             Order.status == STATUS_DELIVERED,
-            Order.delivered_at >= today_start - timedelta(days=6),
+            Order.delivered_at >= window_start,
         )
-        .group_by("day")
         .all()
     )
-    by_day = {str(day): (count, float(total)) for day, count, total in rows}
+
+    by_day = {}
+    for delivered_at, price in recent:
+        if delivered_at is None:
+            continue
+        key = delivered_at.date()
+        count, total = by_day.get(key, (0, 0.0))
+        by_day[key] = (count + 1, total + float(price or 0.0))
 
     daily = []
     for offset in range(6, -1, -1):
         day = (today_start - timedelta(days=offset)).date()
-        count, total = by_day.get(str(day), (0, 0.0))
+        count, total = by_day.get(day, (0, 0.0))
         daily.append(
             {
                 "date": day.isoformat(),
