@@ -159,10 +159,16 @@ export default function OrderReceipt() {
               <p className="font-body text-sm text-slate-700">{fullDate(order.delivered_at)}</p>
             </Block>
           )}
-          {payment?.mpesa_receipt && (
-            <Block label="M-Pesa receipt">
-              <p className="font-mono text-sm text-slate-900">{payment.mpesa_receipt}</p>
+          {payment?.method === 'cash' ? (
+            <Block label="Payment method">
+              <p className="font-body text-sm text-slate-900">Cash paid to the rider</p>
             </Block>
+          ) : (
+            payment?.mpesa_receipt && (
+              <Block label="M-Pesa receipt">
+                <p className="font-mono text-sm text-slate-900">{payment.mpesa_receipt}</p>
+              </Block>
+            )
           )}
           {payment?.phone && (
             <Block label="Paid from">
