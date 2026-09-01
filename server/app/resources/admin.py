@@ -8,7 +8,11 @@ from ..constants import (
     APPLICATION_PENDING,
     APPLICATION_REJECTED,
     APPLICATION_STATUSES,
+    METHOD_CASH,
     ORDER_STATUSES,
+    PAYMENT_CASH_PENDING,
+    PAYMENT_PAID,
+    PAYMENT_PENDING,
     ROLE_COURIER,
     STATUS_CANCELLED,
     STATUS_DELIVERED,
@@ -20,7 +24,7 @@ from ..constants import (
 )
 from ..extensions import db
 from ..utils.clock import utcnow
-from ..models import CourierApplication, Order, TrackingEvent, User
+from ..models import CourierApplication, Order, Payment, TrackingEvent, User
 from ..schemas import (
     admin_user_update_schema,
     application_decision_schema,
@@ -29,6 +33,7 @@ from ..schemas import (
     location_update_schema,
     order_detail_schema,
     order_schema,
+    payment_schema,
     status_update_schema,
     user_schema,
     user_summary_schema,
@@ -505,3 +510,48 @@ def user_detail(user_id):
         "application": courier_application_schema.dump(application) if application else None,
         "recent_orders": [order_schema.dump(order) for order in recent],
     }
+
+@admin_bp.patch("/payments/<int:order_id>/confirm")
+@admin_required
+def confirm_payment(order_id):
+    """Settle an order the rider was paid for directly, when the STK push did not land."""
+    admin = current_user()
+    order = order_or_404(order_id)
+
+    if order.status == STATUS_CANCELLED:
+        raise ApiError("A cancelled order cannot be paid for", 409)
+
+    payment = order.payment
+    if payment is not None and payment.status == PAYMENT_PAID:
+        raise ConflictError("This order has already been paid for")
+
+    if payment is None:
+        payment = Payment(order_id=order.id, amount_kes=order.price_kes)
+        db.session.add(payment)
+
+    payment.amount_kes = order.price_kes
+    payment.method = METHOD_CASH
+    payment.status = PAYMENT_PAID
+    payment.paid_at = utcnow()
+    payment.result_description = f"Cash payment confirmed by {admin.name}"
+    db.session.commit()
+
+    notifications.notify(order, notifications.PAYMENT_RECEIVED)
+    return {"payment": payment_schema.dump(payment)}
+
+
+@admin_bp.patch("/payments/<int:order_id>/reject")
+@admin_required
+def reject_payment(order_id):
+    """Turn down a cash payment the rider reported but could not account for."""
+    order = order_or_404(order_id)
+    payment = order.payment
+
+    if payment is None or payment.status != PAYMENT_CASH_PENDING:
+        raise ConflictError("There is no cash payment awaiting confirmation on this order")
+
+    payment.status = PAYMENT_PENDING
+    payment.result_description = "Cash payment was not confirmed"
+    db.session.commit()
+
+    return {"payment": payment_schema.dump(payment)}
