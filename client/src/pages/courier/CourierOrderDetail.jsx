@@ -13,6 +13,7 @@ import { PageContainer } from '@/components/layout/AppShell'
 import { PageSpinner } from '@/components/ui/Spinner'
 import {
   advanceStage,
+  declareCash,
   fetchAssignment,
   pushLocation,
   selectAssignment,
@@ -81,6 +82,16 @@ export default function CourierOrderDetail() {
   const currentStageLabel = STATUS_META[order.status]?.label?.toLowerCase() ?? order.status
   const nextStageLabel = nextStage ? STATUS_META[nextStage]?.label?.toLowerCase() : null
   const canAdvance = Boolean(nextStage) && Boolean(STATUS_META[nextStage])
+  const paid = order.payment_status === 'paid'
+  const cashPending = order.payment_status === 'cash_pending'
+  const cancelled = order.status === STATUS.CANCELLED
+
+  const reportCash = async () => {
+    const result = await dispatch(declareCash(order.id))
+    if (declareCash.fulfilled.match(result)) {
+      toast.success('Reported to the admin team for confirmation')
+    }
+  }
 
   const advance = async () => {
     if (!canAdvance) return
@@ -226,6 +237,41 @@ export default function CourierOrderDetail() {
                 <p className="mt-2.5 font-body text-xs text-slate-400">
                   Stages move in order. The customer is emailed on every change.
                 </p>
+              </>
+            )}
+          </Panel>
+
+          <Panel title="Payment">
+            {paid ? (
+              <p className="font-body text-sm text-slate-500">
+                {order.payment_method === 'cash'
+                  ? 'Paid in cash and confirmed by an admin. Nothing to collect.'
+                  : 'Paid by M-Pesa. Nothing to collect.'}
+              </p>
+            ) : cancelled ? (
+              <p className="font-body text-sm text-slate-500">
+                This delivery was cancelled. There is nothing to collect.
+              </p>
+            ) : cashPending ? (
+              <p className="rounded-xl bg-amber-100 px-3.5 py-2.5 font-body text-sm text-amber-700">
+                Reported. Call the admin team to confirm it, then the customer gets their receipt.
+              </p>
+            ) : (
+              <>
+                <p className="font-body text-sm text-slate-500">
+                  If the M-Pesa prompt never reached the customer, take {money(order.price_kes)}{' '}
+                  directly and report it here. An admin confirms it before the order is closed.
+                </p>
+                <Button
+                  fullWidth
+                  variant="dark"
+                  size="lg"
+                  className="mt-3.5"
+                  loading={saving}
+                  onClick={reportCash}
+                >
+                  Customer paid me in cash
+                </Button>
               </>
             )}
           </Panel>
