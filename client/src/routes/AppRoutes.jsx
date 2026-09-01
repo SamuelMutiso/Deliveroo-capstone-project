@@ -17,10 +17,12 @@ import NewOrder from "@/pages/customer/NewOrder";
 import NotFound from "@/pages/NotFound";
 import OrderDetail from "@/pages/customer/OrderDetail";
 import OrderReceipt from "@/pages/customer/OrderReceipt";
+import Privacy from "@/pages/Privacy";
 import Profile from "@/pages/customer/Profile";
 import Register from "@/pages/auth/Register";
 import ResetPassword from "@/pages/auth/ResetPassword";
 import Services from "@/pages/Services";
+import Terms from "@/pages/Terms";
 import VerifyReceipt from "@/pages/VerifyReceipt";
 import ProtectedRoute from "./ProtectedRoute";
 import RoleRoute from "./RoleRoute";
@@ -32,6 +34,8 @@ export default function AppRoutes() {
       <Route path="/about" element={<About />} />
       <Route path="/services" element={<Services />} />
       <Route path="/verify" element={<VerifyReceipt />} />
+      <Route path="/terms" element={<Terms />} />
+      <Route path="/privacy" element={<Privacy />} />
 
       {/* Authentication */}
       <Route path="/login" element={<Login />} />

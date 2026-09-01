@@ -18,8 +18,8 @@ const COLUMNS = [
 ]
 
 const LEGAL = [
-  { to: '/services', label: 'Terms of service' },
-  { to: '/services', label: 'Privacy policy' },
+  { to: '/terms', label: 'Terms of service' },
+  { to: '/privacy', label: 'Privacy policy' },
   { to: '/about', label: 'Contact us' },
 ]
 
