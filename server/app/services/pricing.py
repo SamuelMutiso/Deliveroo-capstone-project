@@ -22,7 +22,7 @@ def quote(distance_km, category, weight_kg=None):
             status_code=422,
         )
 
-    base = float(current_app.config["BASE_RATE_KES"])
+    base = float(tier.get("base_kes") or current_app.config["BASE_RATE_KES"])
     per_km = float(current_app.config["PRICE_PER_KM_KES"])
     distance_km = max(round(float(distance_km), 2), 0.0)
 
