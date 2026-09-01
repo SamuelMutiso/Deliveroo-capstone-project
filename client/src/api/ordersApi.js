@@ -21,6 +21,7 @@ export const courierApi = {
     axiosClient.patch(`/courier/orders/${id}/status`, payload).then((r) => r.data),
   pushLocation: (id, payload) =>
     axiosClient.patch(`/courier/orders/${id}/location`, payload).then((r) => r.data),
+  declareCash: (id) => axiosClient.post(`/courier/orders/${id}/cash`).then((r) => r.data),
   setAvailability: (isAvailable) =>
     axiosClient
       .patch('/courier/availability', { is_available: isAvailable })
