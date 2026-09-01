@@ -29,6 +29,14 @@ COURIER_TRANSITIONS = {
 }
 
 WEIGHT_CATEGORIES = {
+    "envelope": {
+        "label": "Envelope",
+        "description": "Documents, letters, keys and small items",
+        "max_kg": 1,
+        "multiplier": 1.0,
+        "handling_kes": 0,
+        "base_kes": 90,
+    },
     "light": {
         "label": "Light",
         "description": "Documents and small packets",
