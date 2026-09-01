@@ -226,7 +226,7 @@ function RouteSection() {
   }, [])
 
   return (
-    <section ref={sectionRef} id="route" className="bg-brand-50 py-10 sm:py-14">
+    <section ref={sectionRef} id="route" className="bg-brand-50 py-20 sm:py-28">
       <PageContainer>
         <div className="flex items-end justify-between gap-5">
           <Reveal>
@@ -247,7 +247,7 @@ function RouteSection() {
           </Reveal>
         </div>
 
-        <Reveal className="mt-3 sm:mt-5">
+        <Reveal className="mt-10 sm:mt-14">
           <div className="relative h-[145px] w-full sm:h-[175px]">
             <svg
               viewBox="0 0 900 180"
@@ -297,7 +297,7 @@ const STATUSES = ['Order placed', 'Courier assigned', 'Picked up', 'In transit',
 
 function TrackingSection() {
   return (
-    <section id="tracking" className="bg-slate-950 py-10 text-white sm:py-14">
+    <section id="tracking" className="bg-slate-950 py-20 text-white sm:py-28">
       <PageContainer>
         <div className="grid gap-6 sm:grid-cols-[.8fr_1.2fr] sm:items-end sm:gap-12">
           <Reveal>
@@ -427,7 +427,7 @@ export default function Landing() {
           aria-hidden="true"
         />
 
-        <PageContainer className="relative flex min-h-[620px] flex-col justify-center pb-8 pt-28 sm:min-h-[680px] sm:pt-32">
+        <PageContainer className="relative flex min-h-[100svh] flex-col justify-center pb-20 pt-28 sm:pt-32">
           <Reveal>
             <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-white/10 px-3.5 py-0.5 font-body text-xs font-semibold uppercase tracking-[0.14em] text-brand-300 ring-1 ring-inset ring-white/15">
               Nairobi · parcel delivery
@@ -472,7 +472,7 @@ export default function Landing() {
         </PageContainer>
       </section>
 
-      <section id="how" className="bg-white py-10 sm:py-14">
+      <section id="how" className="bg-white py-20 sm:py-28">
         <PageContainer>
           <Reveal>
             <p className="font-body text-[9px] font-semibold uppercase tracking-[0.16em] text-brand-700">
@@ -485,7 +485,7 @@ export default function Landing() {
             </h2>
           </Reveal>
 
-          <Reveal className="mt-5">
+          <Reveal className="mt-10">
             <div className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-inset ring-slate-100">
               <div className="grid sm:grid-cols-2">
                 <div className="border-b border-slate-100 p-4 sm:border-b-0 sm:border-r sm:p-5">
@@ -530,7 +530,7 @@ export default function Landing() {
 
       <TrackingSection />
 
-      <section className="bg-white py-10 sm:py-14">
+      <section className="bg-white py-20 sm:py-28">
         <PageContainer>
           <Reveal>
             <p className="font-body text-xs uppercase tracking-[0.16em] text-brand-700">
@@ -543,7 +543,7 @@ export default function Landing() {
             </h2>
           </Reveal>
 
-          <div className="mt-8 grid gap-6 md:grid-cols-3">
+          <div className="mt-12 grid gap-8 md:grid-cols-3">
             {WORK_STEPS.map((step, index) => (
               <Reveal key={step.number} delay={index * 0.05}>
                 <article className="flex flex-col">
@@ -571,7 +571,7 @@ export default function Landing() {
         <Figure src={IMAGES.nairobiStreet} alt="A Nairobi street scene" rounded="" fill />
         <div className="absolute inset-0 bg-slate-950/80" aria-hidden="true" />
 
-        <PageContainer className="relative py-16 sm:py-20">
+        <PageContainer className="relative py-24 sm:py-32">
           <Reveal className="text-center">
             <p className="font-body text-[9px] font-semibold uppercase tracking-[0.16em] text-brand-300">
               Ready?
@@ -594,7 +594,7 @@ export default function Landing() {
         </PageContainer>
       </section>
 
-      <footer className="bg-slate-950 py-6 text-white">
+      <footer className="bg-slate-950 py-10 text-white">
         <PageContainer className="flex flex-col items-center justify-between gap-3 sm:flex-row">
           <Link to="/" className="font-display text-xl font-bold tracking-[-0.05em]">
             Deliveroo
@@ -605,6 +605,12 @@ export default function Landing() {
             </Link>
             <Link to="/services" className="py-1.5 font-body text-xs text-white/60 transition hover:text-white">
               Services
+            </Link>
+            <Link to="/terms" className="py-1.5 font-body text-xs text-white/60 transition hover:text-white">
+              Terms
+            </Link>
+            <Link to="/privacy" className="py-1.5 font-body text-xs text-white/60 transition hover:text-white">
+              Privacy
             </Link>
             <Link to="/login" className="py-1.5 font-body text-xs text-white/60 transition hover:text-white">
               Sign in
