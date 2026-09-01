@@ -75,6 +75,10 @@ export const PAYMENT_META = {
     label: "Paid",
     chip: "bg-emerald-100 text-emerald-700 ring-emerald-300/60",
   },
+  cash_pending: {
+    label: "Cash to confirm",
+    chip: "bg-amber-100 text-amber-700 ring-amber-300/60",
+  },
   failed: { label: "Failed", chip: "bg-red-100 text-red-700 ring-red-300/60" },
 };
 

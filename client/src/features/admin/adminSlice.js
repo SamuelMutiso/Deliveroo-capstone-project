@@ -165,6 +165,32 @@ export const rejectApplication = createAsyncThunk(
   },
 )
 
+export const confirmPayment = createAsyncThunk(
+  'admin/confirmPayment',
+  async (orderId, { rejectWithValue }) => {
+    try {
+      await adminApi.confirmPayment(orderId)
+      const data = await adminApi.order(orderId)
+      return data.order
+    } catch (error) {
+      return rejectWithValue(extractError(error, 'Could not confirm the payment'))
+    }
+  },
+)
+
+export const rejectPayment = createAsyncThunk(
+  'admin/rejectPayment',
+  async (orderId, { rejectWithValue }) => {
+    try {
+      await adminApi.rejectPayment(orderId)
+      const data = await adminApi.order(orderId)
+      return data.order
+    } catch (error) {
+      return rejectWithValue(extractError(error, 'Could not turn down the payment'))
+    }
+  },
+)
+
 const adminSlice = createSlice({
   name: 'admin',
   initialState,
@@ -272,6 +298,14 @@ const adminSlice = createSlice({
       .addCase(setOrderLocation.pending, savePending)
       .addCase(setOrderLocation.fulfilled, applyOrder)
       .addCase(setOrderLocation.rejected, saveRejected)
+
+      .addCase(confirmPayment.pending, savePending)
+      .addCase(confirmPayment.fulfilled, applyOrder)
+      .addCase(confirmPayment.rejected, saveRejected)
+
+      .addCase(rejectPayment.pending, savePending)
+      .addCase(rejectPayment.fulfilled, applyOrder)
+      .addCase(rejectPayment.rejected, saveRejected)
 
       .addCase(updateUser.pending, savePending)
       .addCase(updateUser.fulfilled, (state, action) => {

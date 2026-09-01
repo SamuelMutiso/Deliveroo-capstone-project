@@ -5,7 +5,11 @@ from sqlalchemy import func
 
 from ..constants import (
     COURIER_TRANSITIONS,
+    METHOD_CASH,
     ORDER_STATUSES,
+    PAYMENT_CASH_PENDING,
+    PAYMENT_PAID,
+    STATUS_CANCELLED,
     STATUS_DELIVERED,
     STATUS_IN_TRANSIT,
     STATUS_PICKED_UP,
@@ -13,12 +17,13 @@ from ..constants import (
 )
 from ..extensions import db
 from ..utils.clock import utcnow
-from ..models import Order, TrackingEvent
+from ..models import Order, Payment, TrackingEvent
 from ..schemas import (
     availability_schema,
     location_update_schema,
     order_detail_schema,
     order_schema,
+    payment_schema,
     status_update_schema,
 )
 from ..services import notifications
@@ -246,3 +251,33 @@ def courier_stats():
         },
         "daily": daily,
     }
+
+@couriers_bp.post("/orders/<int:order_id>/cash")
+@courier_required
+def declare_cash(order_id):
+    """Flag that the customer paid this delivery in cash, for an admin to confirm."""
+    user = current_user()
+    order = owned_order_or_404(order_id, user)
+
+    if order.status == STATUS_CANCELLED:
+        raise ApiError("A cancelled order cannot be paid for", 409)
+
+    payment = order.payment
+    if payment is not None and payment.status == PAYMENT_PAID:
+        raise ApiError("This order has already been paid for", 409)
+
+    if payment is None:
+        payment = Payment(order_id=order.id, amount_kes=order.price_kes)
+        db.session.add(payment)
+
+    payment.amount_kes = order.price_kes
+    payment.method = METHOD_CASH
+    payment.status = PAYMENT_CASH_PENDING
+    payment.result_description = f"Cash collected by {user.name}, awaiting confirmation"
+    db.session.commit()
+
+    notifications.notify(order, notifications.CASH_DECLARED)
+    return {
+        "payment": payment_schema.dump(payment),
+        "message": "Reported to the admin team for confirmation",
+    }, 202
