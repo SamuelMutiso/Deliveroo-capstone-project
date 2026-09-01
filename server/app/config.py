@@ -58,10 +58,17 @@ class Config:
     MAIL_USERNAME = os.getenv("MAIL_USERNAME", "")
     MAIL_PASSWORD = os.getenv("MAIL_PASSWORD", "")
     MAIL_DEFAULT_SENDER = os.getenv("MAIL_DEFAULT_SENDER", "Deliveroo <no-reply@deliveroo.co.ke>")
-    MAIL_SUPPRESS_SEND = not bool(os.getenv("MAIL_USERNAME", "")) and not bool(
-        os.getenv("BREVO_API_KEY", "")
+    MAIL_SUPPRESS_SEND = not any(
+        (
+            os.getenv("MAIL_USERNAME", ""),
+            os.getenv("BREVO_API_KEY", ""),
+            os.getenv("GOOGLE_REFRESH_TOKEN", ""),
+        )
     )
     BREVO_API_KEY = os.getenv("BREVO_API_KEY", "")
+    GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
+    GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
+    GOOGLE_REFRESH_TOKEN = os.getenv("GOOGLE_REFRESH_TOKEN", "")
 
     AT_ENV = os.getenv("AT_ENV", "sandbox")
     AT_USERNAME = os.getenv("AT_USERNAME", "")

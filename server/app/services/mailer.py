@@ -5,6 +5,7 @@ from flask import current_app
 from flask_mail import Message
 
 from ..extensions import mail
+from . import gmail_api
 
 BREVO_URL = "https://api.brevo.com/v3/smtp/email"
 BREVO_TIMEOUT = 15
@@ -49,6 +50,16 @@ def _send_via_brevo(app, api_key, subject, recipient, body, html):
         app.logger.warning("Email delivered (brevo) -> %s | %s", recipient, subject)
 
 
+def _send_via_gmail(app, sender, recipient, subject, body, html):
+    with app.app_context():
+        try:
+            gmail_api.send(sender, recipient, subject, body, html)
+        except Exception as error:
+            app.logger.warning("Email delivery failed (gmail): %s", error)
+        else:
+            app.logger.warning("Email delivered (gmail) -> %s | %s", recipient, subject)
+
+
 def _send_via_smtp(app, message):
     with app.app_context():
         try:
@@ -69,6 +80,16 @@ def send_email(subject, recipient, body, html=None):
     if app.config.get("MAIL_SUPPRESS_SEND"):
         app.logger.warning("Email suppressed (no MAIL_USERNAME) -> %s | %s", recipient, subject)
         return False
+
+    if gmail_api.is_configured():
+        sender = app.config.get("MAIL_DEFAULT_SENDER") or app.config.get("MAIL_USERNAME")
+        app.logger.warning("Email sending (gmail) -> %s | %s", recipient, subject)
+        Thread(
+            target=_send_via_gmail,
+            args=(app, sender, recipient, subject, body, html),
+            daemon=True,
+        ).start()
+        return True
 
     api_key = app.config.get("BREVO_API_KEY")
 
