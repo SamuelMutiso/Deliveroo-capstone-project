@@ -68,6 +68,19 @@ export const pushLocation = createAsyncThunk(
   },
 )
 
+export const declareCash = createAsyncThunk(
+  'couriers/declareCash',
+  async (id, { rejectWithValue }) => {
+    try {
+      await courierApi.declareCash(id)
+      const data = await courierApi.detail(id)
+      return data.order
+    } catch (error) {
+      return rejectWithValue(extractError(error, 'Could not report the cash payment'))
+    }
+  },
+)
+
 export const fetchCourierStats = createAsyncThunk('couriers/stats', async () => courierApi.stats())
 
 export const setAvailability = createAsyncThunk(
@@ -149,6 +162,16 @@ const couriersSlice = createSlice({
       })
       .addCase(pushLocation.fulfilled, applyOrder)
       .addCase(pushLocation.rejected, (state, action) => {
+        state.saving = false
+        state.saveError = action.payload
+      })
+
+      .addCase(declareCash.pending, (state) => {
+        state.saving = true
+        state.saveError = null
+      })
+      .addCase(declareCash.fulfilled, applyOrder)
+      .addCase(declareCash.rejected, (state, action) => {
         state.saving = false
         state.saveError = action.payload
       })
