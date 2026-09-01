@@ -51,12 +51,13 @@ def _send_via_brevo(app, api_key, subject, recipient, body, html):
 
 
 def _send_via_gmail(app, sender, recipient, subject, body, html):
-    try:
-        gmail_api.send(sender, recipient, subject, body, html)
-    except Exception as error:
-        app.logger.warning("Email delivery failed (gmail): %s", error)
-    else:
-        app.logger.warning("Email delivered (gmail) -> %s | %s", recipient, subject)
+    with app.app_context():
+        try:
+            gmail_api.send(sender, recipient, subject, body, html)
+        except Exception as error:
+            app.logger.warning("Email delivery failed (gmail): %s", error)
+        else:
+            app.logger.warning("Email delivered (gmail) -> %s | %s", recipient, subject)
 
 
 def _send_via_smtp(app, message):
