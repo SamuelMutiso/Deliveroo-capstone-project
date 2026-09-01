@@ -49,6 +49,7 @@ class OrderSchema(Schema):
     customer = fields.Nested(UserSummarySchema, dump_only=True)
     courier = fields.Nested(UserSummarySchema, dump_only=True, allow_none=True)
     payment_status = fields.Method("resolve_payment_status", dump_only=True)
+    payment_method = fields.Method("resolve_payment_method", dump_only=True)
 
     created_at = fields.DateTime(dump_only=True)
     updated_at = fields.DateTime(dump_only=True)
@@ -58,6 +59,9 @@ class OrderSchema(Schema):
 
     def resolve_payment_status(self, order):
         return order.payment.status if order.payment else "unpaid"
+
+    def resolve_payment_method(self, order):
+        return order.payment.method if order.payment else None
 
 
 class OrderDetailSchema(OrderSchema):
