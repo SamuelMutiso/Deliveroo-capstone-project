@@ -2,7 +2,7 @@ import re
 
 from flask import current_app
 
-from ..constants import ROLE_ADMIN
+from ..constants import METHOD_CASH, ROLE_ADMIN
 from ..extensions import db
 from ..utils.clock import utcnow
 from . import mailer, receipts, sms
@@ -14,6 +14,7 @@ IN_TRANSIT = "in_transit"
 DELIVERED = "delivered"
 CANCELLED = "cancelled"
 PAYMENT_RECEIVED = "payment_received"
+CASH_DECLARED = "cash_declared"
 
 STATUS_EVENTS = {
     "picked_up": PICKED_UP,
@@ -261,19 +262,38 @@ def _copy(order, event):
             },
         )
 
+    if event == CASH_DECLARED:
+        return (
+            f"Cash payment to confirm · {code}",
+            {
+                "admins": (
+                    "Cash payment awaiting confirmation",
+                    [
+                        f"{courier_name} reports collecting {total} in cash from {customer_name} "
+                        f"for parcel <strong>{code}</strong>.",
+                        "Open the order and confirm the payment to close it and release the receipt.",
+                    ],
+                    None,
+                ),
+            },
+        )
+
     if event == PAYMENT_RECEIVED:
         payment = order.payment
-        receipt = payment.mpesa_receipt if payment else "—"
+        if payment is not None and payment.method == METHOD_CASH:
+            proof = "Paid in cash to the rider and confirmed by our team."
+        else:
+            receipt = payment.mpesa_receipt if payment else "—"
+            proof = f"M-Pesa receipt {receipt}."
         return (
             f"Payment received · {code}",
             {
                 "customer": (
                     "Payment received",
                     [
-                        f"We received {total} for parcel <strong>{code}</strong>. "
-                        f"M-Pesa receipt {receipt}.",
+                        f"We received {total} for parcel <strong>{code}</strong>. {proof}",
                     ],
-                    f"Deliveroo: payment of {total} received for {code}. M-Pesa receipt {receipt}.",
+                    f"Deliveroo: payment of {total} received for {code}. {proof}",
                 ),
                 "recipient": (
                     "Delivery to you is paid for",
@@ -285,7 +305,7 @@ def _copy(order, event):
                 ),
                 "admins": (
                     "Payment received",
-                    [f"Order <strong>{code}</strong> was paid. {total}, receipt {receipt}."],
+                    [f"Order <strong>{code}</strong> was paid. {total}. {proof}"],
                     None,
                 ),
             },
