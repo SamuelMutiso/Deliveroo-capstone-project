@@ -438,7 +438,7 @@ export default function Landing() {
             initial={{ opacity: 0, x: -30 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.7, ease }}
-            className="mt-4 font-display text-7xl font-black leading-[.85] tracking-[-0.06em] text-white sm:text-8xl lg:text-9xl"
+            className="mt-4 font-display text-7xl font-extrabold leading-[.85] tracking-[-0.06em] text-white sm:text-8xl lg:text-9xl"
           >
             Deliveroo
           </motion.h1>
@@ -576,7 +576,7 @@ export default function Landing() {
             <p className="font-body text-[9px] font-semibold uppercase tracking-[0.16em] text-brand-300">
               Ready?
             </p>
-            <h2 className="mt-2 font-display text-6xl font-black leading-[.8] tracking-[-0.065em] text-white sm:text-8xl">
+            <h2 className="mt-2 font-display text-6xl font-extrabold leading-[.8] tracking-[-0.065em] text-white sm:text-8xl">
               Send it.
             </h2>
             <p className="mx-auto mt-3 max-w-xs font-body text-sm leading-5 text-slate-300">
