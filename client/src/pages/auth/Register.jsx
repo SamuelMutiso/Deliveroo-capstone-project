@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Eye, EyeOff } from 'lucide-react'
 
 import Button from '@/components/ui/Button'
+import GoogleSignIn from '@/components/auth/GoogleSignIn'
 import ErrorMessage from '@/components/ui/ErrorMessage'
 import Input from '@/components/ui/Input'
 import { PageContainer } from '@/components/layout/AppShell'
@@ -147,6 +148,8 @@ export default function Register() {
             Create account
           </Button>
         </form>
+
+        <GoogleSignIn label="signup_with" />
 
         <p className="mt-6 text-center font-body text-sm text-slate-500">
           Already registered?{' '}

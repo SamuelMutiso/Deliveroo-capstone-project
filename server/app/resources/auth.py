@@ -1,3 +1,5 @@
+import secrets
+
 from flask import Blueprint, current_app, request
 from flask_jwt_extended import (
     create_access_token,
@@ -6,7 +8,7 @@ from flask_jwt_extended import (
     jwt_required,
 )
 
-from ..constants import ROLE_ADMIN
+from ..constants import ROLE_ADMIN, ROLE_CUSTOMER
 from ..extensions import db
 from ..models import PasswordResetToken, User
 from ..models.password_reset import TOKEN_TTL_MINUTES
@@ -19,7 +21,7 @@ from ..schemas import (
     reset_password_schema,
     user_schema,
 )
-from ..services import notifications
+from ..services import google_auth, notifications
 from ..utils.clock import utcnow
 from ..utils.decorators import REVOKED_TOKENS, current_user
 from ..utils.errors import ApiError, ConflictError
@@ -73,6 +75,37 @@ def login():
         raise ApiError("This account has been deactivated", 403)
 
     return {"user": user_schema.dump(user), **issue_tokens(user)}
+
+
+@auth_bp.post("/google")
+def google_sign_in():
+    """Sign in, or create a customer account, from a verified Google identity."""
+    credential = (request.get_json() or {}).get("credential", "").strip()
+    if not credential:
+        raise ApiError("A Google credential is required", 400)
+
+    profile = google_auth.verify(credential)
+    user = User.query.filter_by(email=profile["email"]).first()
+    created = False
+
+    if user is None:
+        user = User(
+            name=profile["name"],
+            email=profile["email"],
+            role=ROLE_CUSTOMER,
+            photo_url=profile.get("picture"),
+        )
+        user.password = secrets.token_urlsafe(32)
+        db.session.add(user)
+        db.session.commit()
+        created = True
+    elif not user.is_active:
+        raise ApiError("This account has been deactivated", 403)
+
+    return (
+        {"user": user_schema.dump(user), "created": created, **issue_tokens(user)},
+        201 if created else 200,
+    )
 
 
 @auth_bp.post("/refresh")

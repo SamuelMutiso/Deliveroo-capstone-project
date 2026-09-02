@@ -20,6 +20,19 @@ export const login = createAsyncThunk('auth/login', async (payload, { rejectWith
   }
 })
 
+export const googleSignIn = createAsyncThunk(
+  'auth/google',
+  async (credential, { rejectWithValue }) => {
+    try {
+      const data = await authApi.google(credential)
+      writeTokens(data)
+      return data.user
+    } catch (error) {
+      return rejectWithValue(extractError(error, 'Could not sign you in with Google'))
+    }
+  },
+)
+
 export const register = createAsyncThunk('auth/register', async (payload, { rejectWithValue }) => {
   try {
     const data = await authApi.register(payload)
@@ -106,6 +119,16 @@ const authSlice = createSlice({
         state.submitting = false
         state.error = action.payload
       })
+      .addCase(googleSignIn.pending, (state) => {
+        state.submitting = true
+        state.error = null
+      })
+      .addCase(googleSignIn.fulfilled, authenticate)
+      .addCase(googleSignIn.rejected, (state, action) => {
+        state.submitting = false
+        state.error = action.payload
+      })
+
       .addCase(register.pending, (state) => {
         state.submitting = true
         state.error = null

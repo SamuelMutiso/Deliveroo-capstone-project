@@ -11,6 +11,7 @@ from ..constants import (
 from ..extensions import db
 from ..models import CourierApplication
 from ..schemas import courier_application_create_schema, courier_application_schema
+from ..services import notifications
 from ..utils.decorators import current_user
 from ..utils.errors import ApiError, ConflictError
 
@@ -75,6 +76,8 @@ def apply():
 
     db.session.add(application)
     db.session.commit()
+
+    notifications.rider_application(application)
 
     return {"application": courier_application_schema.dump(application)}, 201
 
