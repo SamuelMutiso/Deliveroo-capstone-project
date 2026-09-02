@@ -3,6 +3,9 @@ import { motion, useAnimationControls } from 'framer-motion'
 import { useEffect, useRef, useState } from 'react'
 
 import Button from '@/components/ui/Button'
+import NetworkStats from '@/components/landing/NetworkStats'
+import QuoteWidget from '@/components/landing/QuoteWidget'
+import TrackParcel from '@/components/landing/TrackParcel'
 import Figure from '@/components/ui/Figure'
 import { PageContainer } from '@/components/layout/AppShell'
 import { HOME_BY_ROLE } from '@/utils/constants'
@@ -293,13 +296,11 @@ function RouteSection() {
   )
 }
 
-const STATUSES = ['Order placed', 'Courier assigned', 'Picked up', 'In transit', 'Delivered']
-
 function TrackingSection() {
   return (
     <section id="tracking" className="bg-slate-950 py-20 text-white sm:py-28">
       <PageContainer>
-        <div className="grid gap-6 sm:grid-cols-[.8fr_1.2fr] sm:items-end sm:gap-12">
+        <div className="grid gap-10 sm:grid-cols-[.85fr_1.15fr] sm:gap-12">
           <Reveal>
             <p className="font-body text-[9px] font-semibold uppercase tracking-[0.16em] text-brand-300">
               Track
@@ -309,29 +310,13 @@ function TrackingSection() {
               <br />
               where it is.
             </h2>
+            <p className="mt-5 max-w-xs font-body text-base leading-6 text-slate-400">
+              Every parcel gets a code. Anyone holding it can check the stage without an account.
+            </p>
           </Reveal>
 
-          <Reveal>
-            <div className="border-t border-white/15">
-              {STATUSES.map((status, index) => (
-                <div
-                  key={status}
-                  className="flex items-center justify-between border-b border-white/15 py-2.5"
-                >
-                  <div className="flex items-center gap-3">
-                    <span
-                      className={`h-1.5 w-1.5 rounded-full ${
-                        index < 4 ? 'bg-brand-300' : 'bg-white/20'
-                      }`}
-                    />
-                    <span className={`font-body text-sm ${index < 4 ? 'text-white' : 'text-white/30'}`}>
-                      {status}
-                    </span>
-                  </div>
-                  <span className="font-mono text-[9px] text-white/20">0{index + 1}</span>
-                </div>
-              ))}
-            </div>
+          <Reveal delay={0.08}>
+            <TrackParcel />
           </Reveal>
         </div>
       </PageContainer>
@@ -386,20 +371,14 @@ export default function Landing() {
           </Link>
 
           <nav className="hidden items-center rounded-full bg-white/90 px-1.5 py-1.5 shadow-sm ring-1 ring-black/5 backdrop-blur md:flex">
-            <a href="#route" className="px-4 py-1.5 font-body text-sm font-medium">
-              Route
+            <a href="#how" className="px-4 py-1.5 font-body text-sm font-medium">
+              Get a price
             </a>
             <a href="#tracking" className="px-4 py-1.5 font-body text-sm font-medium">
-              Tracking
-            </a>
-            <a href="#how" className="px-4 py-1.5 font-body text-sm font-medium">
-              How it works
+              Track
             </a>
             <Link to="/about" className="px-4 py-1.5 font-body text-sm font-medium">
               About us
-            </Link>
-            <Link to="/services" className="px-4 py-1.5 font-body text-sm font-medium">
-              Services
             </Link>
           </nav>
 
@@ -451,23 +430,34 @@ export default function Landing() {
             </p>
           </Reveal>
 
-          <Reveal delay={0.14} className="mt-6 flex flex-wrap items-center gap-2.5">
-            <Button as={Link} to="/register" size="lg">
-              Start delivery
+          <Reveal delay={0.14} className="mt-6 flex flex-wrap items-center gap-x-7 gap-y-3">
+            <Button as={Link} to="/register" size="lg" className="px-10">
+              Start a delivery
             </Button>
-            <Button
-              as="a"
+            <a
               href="#how"
-              size="lg"
-              variant="outline"
-              className="border-white/20 bg-white/10 text-white ring-white/20 hover:bg-white/20"
+              className="font-body text-base font-medium text-white/70 underline-offset-4 transition hover:text-white hover:underline"
             >
-              How it works
-            </Button>
+              See the price first
+            </a>
+            <a
+              href="#tracking"
+              className="font-body text-base font-medium text-white/70 underline-offset-4 transition hover:text-white hover:underline"
+            >
+              Track a parcel
+            </a>
           </Reveal>
 
           <Reveal delay={0.2} className="mt-10 max-w-md">
             <HeroJourney />
+          </Reveal>
+        </PageContainer>
+      </section>
+
+      <section className="bg-white py-20 sm:py-28">
+        <PageContainer>
+          <Reveal>
+            <NetworkStats />
           </Reveal>
         </PageContainer>
       </section>
@@ -486,43 +476,9 @@ export default function Landing() {
           </Reveal>
 
           <Reveal className="mt-10">
-            <div className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-inset ring-slate-100">
-              <div className="grid sm:grid-cols-2">
-                <div className="border-b border-slate-100 p-4 sm:border-b-0 sm:border-r sm:p-5">
-                  <p className="font-body text-[9px] font-semibold uppercase tracking-[0.14em] text-brand-700">
-                    Pickup
-                  </p>
-                  <p className="mt-1.5 font-display text-lg font-semibold tracking-[-0.03em]">
-                    Kilimani
-                  </p>
-                  <p className="mt-0.5 font-body text-xs text-slate-400">Nairobi, Kenya</p>
-                </div>
-
-                <div className="p-4 sm:p-5">
-                  <p className="font-body text-[9px] font-semibold uppercase tracking-[0.14em] text-brand-700">
-                    Destination
-                  </p>
-                  <p className="mt-1.5 font-display text-lg font-semibold tracking-[-0.03em]">
-                    Westlands
-                  </p>
-                  <p className="mt-0.5 font-body text-xs text-slate-400">Nairobi, Kenya</p>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-3 border-t border-slate-100 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
-                <div>
-                  <p className="font-body text-[9px] uppercase tracking-[0.14em] text-brand-700">
-                    Estimated
-                  </p>
-                  <p className="mt-1 font-display text-base font-semibold">8.4 km · ~24 min</p>
-                </div>
-
-                <Button as={Link} to="/register" variant="dark" className="w-full rounded-full sm:w-auto">
-                  Start delivery
-                </Button>
-              </div>
-            </div>
+            <QuoteWidget />
           </Reveal>
+
         </PageContainer>
       </section>
 
@@ -563,6 +519,69 @@ export default function Landing() {
                 </article>
               </Reveal>
             ))}
+          </div>
+        </PageContainer>
+      </section>
+
+      <section id="riders" className="bg-brand-50 py-20 sm:py-28">
+        <PageContainer>
+          <div className="grid gap-10 lg:grid-cols-[1fr_1fr] lg:items-center lg:gap-16">
+            <Reveal>
+              <p className="font-body text-[9px] font-semibold uppercase tracking-[0.16em] text-brand-700">
+                Ride with us
+              </p>
+              <h2 className="mt-2 font-display text-[2.35rem] font-bold leading-[.9] tracking-[-0.055em] text-slate-950 sm:text-6xl">
+                Own a bike?
+                <br />
+                Put it to work.
+              </h2>
+              <p className="mt-5 max-w-md font-body text-base leading-6 text-slate-600">
+                Ride on your own hours, take the jobs you want, and get paid a share of every
+                completed delivery. Apply in a few minutes and our team reviews it.
+              </p>
+              <div className="mt-7">
+                <Button as={Link} to="/register" variant="dark" size="lg" className="px-8">
+                  Apply to ride
+                </Button>
+              </div>
+            </Reveal>
+
+            <Reveal delay={0.08}>
+              <dl className="grid gap-x-6 gap-y-7 sm:grid-cols-2">
+                <div>
+                  <dt className="font-display text-2xl font-semibold tracking-[-0.03em] text-slate-950">
+                    You set your hours
+                  </dt>
+                  <dd className="mt-1.5 font-body text-sm text-slate-600">
+                    Go on duty when you want to work. Nothing is assigned to you while you are off.
+                  </dd>
+                </div>
+                <div>
+                  <dt className="font-display text-2xl font-semibold tracking-[-0.03em] text-slate-950">
+                    Paid per delivery
+                  </dt>
+                  <dd className="mt-1.5 font-body text-sm text-slate-600">
+                    A share of every fare you complete, visible in your earnings page as you go.
+                  </dd>
+                </div>
+                <div>
+                  <dt className="font-display text-2xl font-semibold tracking-[-0.03em] text-slate-950">
+                    Own or company bike
+                  </dt>
+                  <dd className="mt-1.5 font-body text-sm text-slate-600">
+                    Bring your own machine, or ride one of ours once you are approved.
+                  </dd>
+                </div>
+                <div>
+                  <dt className="font-display text-2xl font-semibold tracking-[-0.03em] text-slate-950">
+                    Only your runs
+                  </dt>
+                  <dd className="mt-1.5 font-body text-sm text-slate-600">
+                    You see the parcels assigned to you and nothing else on the network.
+                  </dd>
+                </div>
+              </dl>
+            </Reveal>
           </div>
         </PageContainer>
       </section>

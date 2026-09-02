@@ -6,6 +6,7 @@ from .geo import geo_bp
 from .notifications import notifications_bp
 from .orders import orders_bp
 from .payments import payments_bp
+from .public import public_bp
 
 BLUEPRINTS = (
     auth_bp,
@@ -16,6 +17,7 @@ BLUEPRINTS = (
     applications_bp,
     geo_bp,
     notifications_bp,
+    public_bp,
 )
 
 __all__ = [
@@ -28,4 +30,5 @@ __all__ = [
     "notifications_bp",
     "orders_bp",
     "payments_bp",
+    "public_bp",
 ]

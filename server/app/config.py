@@ -99,6 +99,8 @@ class TestingConfig(Config):
     TESTING = True
     MPESA_CONSUMER_KEY = ""
     MPESA_CONSUMER_SECRET = ""
+    GOOGLE_OAUTH_CLIENT_ID = ""
+    GOOGLE_REFRESH_TOKEN = ""
     GEO_OFFLINE = True
     BCRYPT_LOG_ROUNDS = 4
     SQLALCHEMY_DATABASE_URI = "sqlite://"
