@@ -15,6 +15,7 @@ DELIVERED = "delivered"
 CANCELLED = "cancelled"
 PAYMENT_RECEIVED = "payment_received"
 CASH_DECLARED = "cash_declared"
+RIDER_APPLIED = "rider_applied"
 
 STATUS_EVENTS = {
     "picked_up": PICKED_UP,
@@ -502,3 +503,52 @@ def password_reset(user, link, minutes):
         plain,
         mailer.wrap_plain_html(title, paragraphs, "Deliveroo Logistics, Nairobi"),
     )
+
+def rider_application(application):
+    """Tell every admin that a customer has applied to ride, and confirm it to the applicant."""
+    from ..models import Notification, User
+
+    name = application.full_name
+    vehicle = application.vehicle_label
+    title = "New rider application"
+    subject = f"New rider application · {name}"
+    paragraphs = [
+        f"<strong>{name}</strong> has applied to ride for Deliveroo.",
+        f"Vehicle {vehicle}. Licence {application.licence_number}. Phone {application.phone}.",
+        "Open the rider applications board to approve the application or turn it down.",
+    ]
+    body = _plain(paragraphs)
+
+    for admin in User.query.filter_by(role=ROLE_ADMIN, is_active=True).all():
+        recipient = admin.notification_email
+        if recipient:
+            mailer.send_email(
+                subject,
+                recipient,
+                body,
+                mailer.wrap_plain_html(title, paragraphs, "Deliveroo Logistics, Nairobi"),
+            )
+        Notification.record(
+            admin,
+            RIDER_APPLIED,
+            title,
+            f"{name} applied to ride with us on a {vehicle}.",
+        )
+
+    applicant = application.applicant
+    if applicant is not None and applicant.notification_email:
+        applicant_title = "We have your rider application"
+        applicant_paragraphs = [
+            f"Thanks {name.split()[0]}, your application to ride for Deliveroo is with our team.",
+            "We review applications in the order they arrive and will email you either way.",
+        ]
+        mailer.send_email(
+            "Rider application received",
+            applicant.notification_email,
+            _plain(applicant_paragraphs),
+            mailer.wrap_plain_html(
+                applicant_title, applicant_paragraphs, "Deliveroo Logistics, Nairobi"
+            ),
+        )
+
+    db.session.commit()
