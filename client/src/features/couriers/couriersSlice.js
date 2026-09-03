@@ -46,9 +46,9 @@ export const fetchAssignment = createAsyncThunk(
 
 export const advanceStage = createAsyncThunk(
   'couriers/advanceStage',
-  async ({ id, status, note }, { rejectWithValue }) => {
+  async ({ id, status, note, receivedBy }, { rejectWithValue }) => {
     try {
-      const data = await courierApi.advance(id, { status, note })
+      const data = await courierApi.advance(id, { status, note, received_by: receivedBy })
       return data.order
     } catch (error) {
       return rejectWithValue(extractError(error, 'Could not update the delivery stage'))
