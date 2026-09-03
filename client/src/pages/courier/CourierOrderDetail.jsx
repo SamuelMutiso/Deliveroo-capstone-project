@@ -40,6 +40,7 @@ export default function CourierOrderDetail() {
   const saveError = useSelector(selectCourierSaveError)
 
   const [manual, setManual] = useState({ lat: '', lng: '' })
+  const [receivedBy, setReceivedBy] = useState('')
   const [locating, setLocating] = useState(false)
 
   useEffect(() => {
@@ -93,11 +94,21 @@ export default function CourierOrderDetail() {
     }
   }
 
+  const handingOver = nextStage === STATUS.DELIVERED
+  const proofMissing = handingOver && !receivedBy.trim()
+
   const advance = async () => {
-    if (!canAdvance) return
-    const result = await dispatch(advanceStage({ id: order.id, status: nextStage }))
+    if (!canAdvance || proofMissing) return
+    const result = await dispatch(
+      advanceStage({
+        id: order.id,
+        status: nextStage,
+        receivedBy: handingOver ? receivedBy.trim() : undefined,
+      }),
+    )
     if (advanceStage.fulfilled.match(result)) {
       toast.success(`Marked as ${nextStageLabel}`)
+      setReceivedBy('')
     }
   }
 
@@ -224,8 +235,25 @@ export default function CourierOrderDetail() {
                 <p className="font-body text-sm text-slate-500">
                   Current stage is {currentStageLabel}.
                 </p>
+                {handingOver && (
+                  <Input
+                    label="Received by"
+                    className="mt-3.5"
+                    value={receivedBy}
+                    onChange={(event) => setReceivedBy(event.target.value)}
+                    placeholder="Name of whoever took the parcel"
+                    hint="Goes on the customer's receipt as proof of delivery"
+                  />
+                )}
                 {canAdvance ? (
-                  <Button fullWidth size="lg" className="mt-3.5" loading={saving} onClick={advance}>
+                  <Button
+                    fullWidth
+                    size="lg"
+                    className="mt-3.5"
+                    loading={saving}
+                    disabled={proofMissing}
+                    onClick={advance}
+                  >
                     Mark as {nextStageLabel}
                   </Button>
                 ) : (
@@ -235,7 +263,9 @@ export default function CourierOrderDetail() {
                   </p>
                 )}
                 <p className="mt-2.5 font-body text-xs text-slate-400">
-                  Stages move in order. The customer is emailed on every change.
+                  {proofMissing
+                    ? 'Record who received the parcel before closing the delivery.'
+                    : 'Stages move in order. The customer is emailed on every change.'}
                 </p>
               </>
             )}
