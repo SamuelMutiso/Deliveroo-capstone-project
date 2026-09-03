@@ -1,3 +1,4 @@
+from flask import request
 from marshmallow import ValidationError
 from sqlalchemy.exc import IntegrityError
 from werkzeug.exceptions import HTTPException
@@ -59,5 +60,7 @@ def register_error_handlers(app):
     @app.errorhandler(Exception)
     def handle_unexpected(error):
         db.session.rollback()
-        app.logger.exception("Unhandled error: %s", error)
+        app.logger.exception(
+            "Unhandled error on %s %s: %s", request.method, request.path, error
+        )
         return {"message": "Something went wrong on our side"}, 500

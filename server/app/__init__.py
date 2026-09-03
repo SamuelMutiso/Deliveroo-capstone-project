@@ -5,11 +5,14 @@ from .extensions import bcrypt, cors, db, jwt, mail, migrate
 from .resources import BLUEPRINTS
 from .utils.decorators import REVOKED_TOKENS
 from .utils.errors import register_error_handlers
+from .utils.logging import configure_logging
 
 
 def create_app(config_name=None):
     app = Flask(__name__)
     app.config.from_object(get_config(config_name))
+
+    configure_logging(app)
 
     db.init_app(app)
     migrate.init_app(app, db)
