@@ -44,9 +44,9 @@ export default function TrackParcel() {
         <input
           value={code}
           onChange={(event) => setCode(event.target.value)}
-          placeholder="DLV-XXXXXX"
+          placeholder="Enter your tracking code"
           aria-label="Tracking code"
-          className="w-full rounded-full bg-white/10 px-5 py-3 font-mono text-base uppercase text-white ring-1 ring-inset ring-white/20 placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-brand-400"
+          className="w-full rounded-full bg-white/10 px-5 py-3 font-mono text-base uppercase text-white placeholder:normal-case placeholder:font-body ring-1 ring-inset ring-white/20 placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-brand-400"
         />
         <Button type="submit" size="lg" className="shrink-0" loading={looking}>
           Track it

@@ -239,7 +239,7 @@ export default function MapView({
 
   return (
     <div
-      className={`relative ${height} overflow-hidden rounded-2xl ring-1 ring-inset ring-slate-200`}
+      className={`relative isolate ${height} overflow-hidden rounded-2xl ring-1 ring-inset ring-slate-200`}
     >
       <MapContainer
         center={center}
