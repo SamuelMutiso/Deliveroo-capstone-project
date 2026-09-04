@@ -1,6 +1,7 @@
 from marshmallow import Schema, ValidationError, fields, validate, validates, validates_schema
 
 from ..constants import VEHICLE_OWNERSHIP, VEHICLE_TYPE_VALUES
+from ..utils.phone import PhoneField
 from .user_schema import UserSummarySchema
 
 PHOTO_MAX = 400_000
@@ -36,7 +37,7 @@ class CourierApplicationSchema(Schema):
 
 class CourierApplicationCreateSchema(Schema):
     full_name = fields.Str(required=True, validate=validate.Length(min=2, max=120))
-    phone = fields.Str(required=True, validate=validate.Length(min=7, max=24))
+    phone = PhoneField(required=True)
     licence_number = fields.Str(required=True, validate=validate.Length(min=4, max=40))
     vehicle_type = fields.Str(required=True, validate=validate.OneOf(VEHICLE_TYPE_VALUES))
     vehicle_ownership = fields.Str(

@@ -1,6 +1,7 @@
 from marshmallow import Schema, ValidationError, fields, validate, validates
 
 from ..constants import ROLE_CUSTOMER, USER_ROLES
+from ..utils.phone import PhoneField
 
 
 class UserSchema(Schema):
@@ -36,7 +37,7 @@ class UserSummarySchema(Schema):
 class RegisterSchema(Schema):
     name = fields.Str(required=True, validate=validate.Length(min=2, max=120))
     email = fields.Email(required=True)
-    phone = fields.Str(load_default=None, validate=validate.Length(max=24))
+    phone = PhoneField(load_default=None, allow_none=True)
     password = fields.Str(
         required=True,
         load_only=True,
@@ -52,7 +53,7 @@ class LoginSchema(Schema):
 
 class ProfileUpdateSchema(Schema):
     name = fields.Str(validate=validate.Length(min=2, max=120))
-    phone = fields.Str(allow_none=True, validate=validate.Length(max=24))
+    phone = PhoneField(allow_none=True)
     vehicle = fields.Str(allow_none=True, validate=validate.Length(max=60))
     photo_url = fields.Str(allow_none=True, validate=validate.Length(max=400_000))
 

@@ -1,5 +1,7 @@
 from marshmallow import Schema, fields, validate
 
+from ..utils.phone import PhoneField
+
 
 class PaymentSchema(Schema):
     id = fields.Int(dump_only=True)
@@ -15,7 +17,7 @@ class PaymentSchema(Schema):
 
 
 class CheckoutSchema(Schema):
-    phone = fields.Str(required=True, validate=validate.Length(min=9, max=24))
+    phone = PhoneField(required=True)
 
 
 payment_schema = PaymentSchema()

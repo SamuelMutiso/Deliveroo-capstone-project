@@ -1,6 +1,7 @@
 from marshmallow import Schema, fields, validate
 
 from ..constants import ORDER_STATUSES, WEIGHT_CATEGORIES
+from ..utils.phone import PhoneField
 from .tracking_schema import TrackingEventSchema
 from .user_schema import UserSummarySchema
 
@@ -81,7 +82,7 @@ class OrderCreateSchema(Schema):
     weight_kg = fields.Float(load_default=None, allow_none=True, validate=validate.Range(min=0.1, max=50))
 
     recipient_name = fields.Str(required=True, validate=validate.Length(min=2, max=120))
-    recipient_phone = fields.Str(required=True, validate=validate.Length(min=7, max=24))
+    recipient_phone = PhoneField(required=True)
     recipient_email = fields.Email(load_default=None, allow_none=True)
     notes = fields.Str(load_default=None, allow_none=True, validate=validate.Length(max=400))
 
