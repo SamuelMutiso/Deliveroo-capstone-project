@@ -18,10 +18,12 @@ from ..schemas import (
     password_change_schema,
     profile_update_schema,
     register_schema,
+    resend_code_schema,
     reset_password_schema,
     user_schema,
+    verify_email_schema,
 )
-from ..services import google_auth, notifications
+from ..services import google_auth, notifications, verification
 from ..utils.clock import utcnow
 from ..utils.decorators import REVOKED_TOKENS, current_user
 from ..utils.errors import ApiError, ConflictError
@@ -40,7 +42,7 @@ def issue_tokens(user):
 
 @auth_bp.post("/register")
 def register():
-    """Create an account and return a token pair."""
+    """Create an account and email the code that unlocks it."""
     data = register_schema.load(request.get_json() or {})
 
     if data["role"] == ROLE_ADMIN:
@@ -60,7 +62,50 @@ def register():
     db.session.add(user)
     db.session.commit()
 
-    return {"user": user_schema.dump(user), **issue_tokens(user)}, 201
+    code, minutes = verification.issue(user)
+    notifications.email_verification(user, code, minutes)
+
+    return {
+        "user": user_schema.dump(user),
+        "verification_required": True,
+        "message": f"We sent a 6 digit code to {user.email}. It expires in {minutes} minutes.",
+    }, 201
+
+
+@auth_bp.post("/verify-email")
+def verify_email():
+    """Trade a valid code for a token pair."""
+    data = verify_email_schema.load(request.get_json() or {})
+    user = User.query.filter_by(email=data["email"].lower()).first()
+
+    if user is None:
+        raise ApiError("That code is not right", 400)
+    if user.email_verified:
+        raise ApiError("This account is already confirmed. Sign in instead", 409)
+
+    verification.check(user, data["code"].strip())
+    return {"user": user_schema.dump(user), **issue_tokens(user)}
+
+
+@auth_bp.post("/resend-code")
+def resend_code():
+    """Send another code. Says the same thing whether or not the account exists."""
+    data = resend_code_schema.load(request.get_json() or {})
+    user = User.query.filter_by(email=data["email"].lower()).first()
+
+    wait = verification.RESEND_COOLDOWN_SECONDS
+    if user is not None and not user.email_verified and user.is_active:
+        remaining = verification.seconds_until_resend(user)
+        if remaining == 0:
+            code, minutes = verification.issue(user)
+            notifications.email_verification(user, code, minutes)
+        else:
+            wait = remaining
+
+    return {
+        "message": "If that account still needs confirming, a new code is on its way",
+        "retry_after": wait,
+    }
 
 
 @auth_bp.post("/login")
@@ -73,6 +118,12 @@ def login():
         raise ApiError("Those credentials did not match our records", 401)
     if not user.is_active:
         raise ApiError("This account has been deactivated", 403)
+    if not user.email_verified:
+        return {
+            "message": "Confirm your email address before signing in",
+            "verification_required": True,
+            "email": user.email,
+        }, 403
 
     return {"user": user_schema.dump(user), **issue_tokens(user)}
 
@@ -94,6 +145,7 @@ def google_sign_in():
             email=profile["email"],
             role=ROLE_CUSTOMER,
             photo_url=profile.get("picture"),
+            email_verified=True,
         )
         user.password = secrets.token_urlsafe(32)
         db.session.add(user)
@@ -101,6 +153,9 @@ def google_sign_in():
         created = True
     elif not user.is_active:
         raise ApiError("This account has been deactivated", 403)
+    elif not user.email_verified:
+        user.email_verified = True
+        db.session.commit()
 
     return (
         {"user": user_schema.dump(user), "created": created, **issue_tokens(user)},
