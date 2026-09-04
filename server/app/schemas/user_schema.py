@@ -46,6 +46,15 @@ class RegisterSchema(Schema):
     role = fields.Str(load_default=ROLE_CUSTOMER, validate=validate.OneOf(USER_ROLES))
 
 
+class VerifyEmailSchema(Schema):
+    email = fields.Email(required=True)
+    code = fields.Str(required=True, validate=validate.Length(min=6, max=6))
+
+
+class ResendCodeSchema(Schema):
+    email = fields.Email(required=True)
+
+
 class LoginSchema(Schema):
     email = fields.Email(required=True)
     password = fields.Str(required=True, load_only=True)
@@ -97,6 +106,8 @@ class AdminUserUpdateSchema(Schema):
 user_schema = UserSchema()
 user_summary_schema = UserSummarySchema()
 register_schema = RegisterSchema()
+verify_email_schema = VerifyEmailSchema()
+resend_code_schema = ResendCodeSchema()
 login_schema = LoginSchema()
 profile_update_schema = ProfileUpdateSchema()
 admin_user_update_schema = AdminUserUpdateSchema()

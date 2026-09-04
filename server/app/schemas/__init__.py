@@ -25,9 +25,11 @@ from .user_schema import (
     profile_update_schema,
     password_change_schema,
     register_schema,
+    resend_code_schema,
     reset_password_schema,
     user_schema,
     user_summary_schema,
+    verify_email_schema,
 )
 
 __all__ = [
