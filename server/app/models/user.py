@@ -15,6 +15,7 @@ class User(db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
     role = db.Column(db.String(20), nullable=False, default=ROLE_CUSTOMER, index=True)
     is_active = db.Column(db.Boolean, nullable=False, default=True)
+    email_verified = db.Column(db.Boolean, nullable=False, default=False)
 
     vehicle = db.Column(db.String(60))
     photo_url = db.Column(db.Text)

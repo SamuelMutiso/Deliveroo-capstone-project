@@ -1,4 +1,5 @@
 from .courier_application import CourierApplication
+from .email_verification import EmailVerification
 from .notification import Notification
 from .order import Order, generate_tracking_code
 from .password_reset import PasswordResetToken
@@ -8,6 +9,7 @@ from .user import User
 
 __all__ = [
     "CourierApplication",
+    "EmailVerification",
     "Notification",
     "Order",
     "PasswordResetToken",
