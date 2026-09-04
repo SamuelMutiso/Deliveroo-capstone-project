@@ -169,7 +169,7 @@ export default function OrderDetail() {
 
   const handleCheckout = async () => {
     if (!validatePhone(phone)) {
-      setPhoneError("Enter a valid Safaricom number, for example 0712345678");
+      setPhoneError("Enter a 10 digit M-Pesa number starting 07 or 01, for example 0712345678");
       return;
     }
     setPhoneError(null);
