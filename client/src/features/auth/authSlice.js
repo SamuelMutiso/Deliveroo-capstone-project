@@ -16,6 +16,14 @@ export const login = createAsyncThunk('auth/login', async (payload, { rejectWith
     writeTokens(data)
     return data.user
   } catch (error) {
+    const body = error?.response?.data
+    if (body?.verification_required) {
+      return rejectWithValue({
+        message: body.message,
+        verificationRequired: true,
+        email: body.email || payload.email,
+      })
+    }
     return rejectWithValue(extractError(error, 'Could not sign you in'))
   }
 })
@@ -36,12 +44,35 @@ export const googleSignIn = createAsyncThunk(
 export const register = createAsyncThunk('auth/register', async (payload, { rejectWithValue }) => {
   try {
     const data = await authApi.register(payload)
-    writeTokens(data)
-    return data.user
+    return { email: payload.email, message: data.message }
   } catch (error) {
     return rejectWithValue(extractError(error, 'Could not create your account'))
   }
 })
+
+export const verifyEmail = createAsyncThunk(
+  'auth/verifyEmail',
+  async (payload, { rejectWithValue }) => {
+    try {
+      const data = await authApi.verifyEmail(payload)
+      writeTokens(data)
+      return data.user
+    } catch (error) {
+      return rejectWithValue(extractError(error, 'Could not confirm that code'))
+    }
+  },
+)
+
+export const resendCode = createAsyncThunk(
+  'auth/resendCode',
+  async (payload, { rejectWithValue }) => {
+    try {
+      return await authApi.resendCode(payload)
+    } catch (error) {
+      return rejectWithValue(extractError(error, 'Could not send another code'))
+    }
+  },
+)
 
 export const restoreSession = createAsyncThunk(
   'auth/restore',
@@ -117,7 +148,7 @@ const authSlice = createSlice({
       .addCase(login.fulfilled, authenticate)
       .addCase(login.rejected, (state, action) => {
         state.submitting = false
-        state.error = action.payload
+        state.error = action.payload?.message ?? action.payload
       })
       .addCase(googleSignIn.pending, (state) => {
         state.submitting = true
@@ -133,8 +164,20 @@ const authSlice = createSlice({
         state.submitting = true
         state.error = null
       })
-      .addCase(register.fulfilled, authenticate)
+      .addCase(register.fulfilled, (state) => {
+        state.submitting = false
+        state.error = null
+      })
       .addCase(register.rejected, (state, action) => {
+        state.submitting = false
+        state.error = action.payload
+      })
+      .addCase(verifyEmail.pending, (state) => {
+        state.submitting = true
+        state.error = null
+      })
+      .addCase(verifyEmail.fulfilled, authenticate)
+      .addCase(verifyEmail.rejected, (state, action) => {
         state.submitting = false
         state.error = action.payload
       })
