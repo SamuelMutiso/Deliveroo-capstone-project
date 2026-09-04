@@ -1,4 +1,4 @@
-import { Link, Navigate, useLocation } from 'react-router-dom'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { useState } from 'react'
 import { Eye, EyeOff } from 'lucide-react'
@@ -19,6 +19,7 @@ import { HOME_BY_ROLE } from '@/utils/constants'
 
 export default function Login() {
   const dispatch = useDispatch()
+  const navigate = useNavigate()
   const location = useLocation()
   const serverError = useSelector(selectAuthError)
   const { isAuthenticated, role, submitting } = useAuth()
@@ -44,15 +45,19 @@ export default function Login() {
     )
   }
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault()
 
     const found = validateLogin(values)
 
     setErrors(found)
 
-    if (isEmpty(found)) {
-      dispatch(login(values))
+    if (!isEmpty(found)) return
+
+    const result = await dispatch(login(values))
+
+    if (login.rejected.match(result) && result.payload?.verificationRequired) {
+      navigate('/verify-email', { state: { email: result.payload.email } })
     }
   }
 
