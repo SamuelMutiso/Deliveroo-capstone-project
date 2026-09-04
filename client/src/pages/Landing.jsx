@@ -7,6 +7,7 @@ import NetworkStats from '@/components/landing/NetworkStats'
 import QuoteWidget from '@/components/landing/QuoteWidget'
 import TrackParcel from '@/components/landing/TrackParcel'
 import Figure from '@/components/ui/Figure'
+import Logo from '@/components/layout/Logo'
 import { PageContainer } from '@/components/layout/AppShell'
 import { HOME_BY_ROLE } from '@/utils/constants'
 import { IMAGES } from '@/utils/media'
@@ -360,14 +361,7 @@ export default function Landing() {
       <header className="absolute inset-x-0 top-0 z-50">
         <PageContainer className="flex items-center justify-between py-4">
           <Link to="/" className="flex items-center gap-2.5" aria-label="Deliveroo home">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-400 shadow-inner">
-              <svg viewBox="0 0 32 32" className="h-5 w-5 text-brand-950" fill="none" aria-hidden="true">
-                <path d="M8 21 14 9l4 7.5L20 13l4 8z" fill="currentColor" />
-              </svg>
-            </span>
-            <span className="font-display text-2xl font-bold tracking-[-0.06em] text-white">
-              Deliveroo
-            </span>
+            <Logo size="lg" tone="light" />
           </Link>
 
           <nav className="hidden items-center rounded-full bg-white/90 px-1.5 py-1.5 shadow-sm ring-1 ring-black/5 backdrop-blur md:flex">
