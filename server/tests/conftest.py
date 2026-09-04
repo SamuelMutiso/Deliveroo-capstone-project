@@ -27,7 +27,7 @@ def db(app):
 
 
 def make_user(name, email, role, password="password123"):
-    user = User(name=name, email=email, role=role)
+    user = User(name=name, email=email, role=role, email_verified=True)
     user.password = password
     _db.session.add(user)
     _db.session.commit()

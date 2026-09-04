@@ -1,4 +1,4 @@
-def test_register_creates_customer_and_returns_tokens(client):
+def test_register_creates_customer_and_withholds_tokens(client):
     response = client.post(
         "/api/auth/register",
         json={
@@ -12,7 +12,8 @@ def test_register_creates_customer_and_returns_tokens(client):
 
     assert response.status_code == 201
     assert body["user"]["role"] == "customer"
-    assert "access_token" in body and "refresh_token" in body
+    assert body["verification_required"] is True
+    assert "access_token" not in body and "refresh_token" not in body
     assert "password" not in body["user"]
 
 
