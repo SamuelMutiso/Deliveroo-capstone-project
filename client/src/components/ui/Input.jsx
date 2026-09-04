@@ -5,6 +5,7 @@ export default function Input({
   error,
   hint,
   className = '',
+  inputClassName = '',
   prefix,
   as = 'input',
   ...props
@@ -40,6 +41,7 @@ export default function Input({
             error
               ? 'ring-red-300 focus:ring-red-500'
               : 'ring-slate-200 hover:ring-slate-300 focus:ring-brand-500',
+            inputClassName,
           ].join(' ')}
           {...props}
         />
