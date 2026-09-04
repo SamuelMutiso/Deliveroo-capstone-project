@@ -22,5 +22,9 @@ export const adminApi = {
     axiosClient
       .patch(`/admin/courier-applications/${id}/reject`, payload)
       .then((r) => r.data),
+  confirmPayment: (orderId) =>
+    axiosClient.patch(`/admin/payments/${orderId}/confirm`).then((r) => r.data),
+  rejectPayment: (orderId) =>
+    axiosClient.patch(`/admin/payments/${orderId}/reject`).then((r) => r.data),
   stats: () => axiosClient.get('/admin/stats').then((r) => r.data),
 }

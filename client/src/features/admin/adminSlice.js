@@ -165,6 +165,32 @@ export const rejectApplication = createAsyncThunk(
   },
 )
 
+export const confirmPayment = createAsyncThunk(
+  'admin/confirmPayment',
+  async (orderId, { rejectWithValue }) => {
+    try {
+      await adminApi.confirmPayment(orderId)
+      const data = await adminApi.order(orderId)
+      return data.order
+    } catch (error) {
+      return rejectWithValue(extractError(error, 'Could not confirm the payment'))
+    }
+  },
+)
+
+export const rejectPayment = createAsyncThunk(
+  'admin/rejectPayment',
+  async (orderId, { rejectWithValue }) => {
+    try {
+      await adminApi.rejectPayment(orderId)
+      const data = await adminApi.order(orderId)
+      return data.order
+    } catch (error) {
+      return rejectWithValue(extractError(error, 'Could not turn down the payment'))
+    }
+  },
+)
+
 const adminSlice = createSlice({
   name: 'admin',
   initialState,
@@ -204,7 +230,7 @@ const adminSlice = createSlice({
 
     builder
       .addCase(fetchAdminOrders.pending, (state) => {
-        state.ordersStatus = 'loading'
+        if (!state.orders.length) state.ordersStatus = 'loading'
         state.ordersError = null
       })
       .addCase(fetchAdminOrders.fulfilled, (state, action) => {
@@ -218,7 +244,7 @@ const adminSlice = createSlice({
       })
 
       .addCase(fetchAdminOrder.pending, (state) => {
-        state.detailStatus = 'loading'
+        if (!state.current) state.detailStatus = 'loading'
         state.detailError = null
       })
       .addCase(fetchAdminOrder.fulfilled, (state, action) => {
@@ -231,7 +257,7 @@ const adminSlice = createSlice({
       })
 
       .addCase(fetchStats.pending, (state) => {
-        state.statsStatus = 'loading'
+        if (!state.stats) state.statsStatus = 'loading'
         state.statsError = null
       })
       .addCase(fetchStats.fulfilled, (state, action) => {
@@ -248,7 +274,7 @@ const adminSlice = createSlice({
       })
 
       .addCase(fetchUsers.pending, (state) => {
-        state.usersStatus = 'loading'
+        if (!state.users.length) state.usersStatus = 'loading'
         state.usersError = null
       })
       .addCase(fetchUsers.fulfilled, (state, action) => {
@@ -273,6 +299,14 @@ const adminSlice = createSlice({
       .addCase(setOrderLocation.fulfilled, applyOrder)
       .addCase(setOrderLocation.rejected, saveRejected)
 
+      .addCase(confirmPayment.pending, savePending)
+      .addCase(confirmPayment.fulfilled, applyOrder)
+      .addCase(confirmPayment.rejected, saveRejected)
+
+      .addCase(rejectPayment.pending, savePending)
+      .addCase(rejectPayment.fulfilled, applyOrder)
+      .addCase(rejectPayment.rejected, saveRejected)
+
       .addCase(updateUser.pending, savePending)
       .addCase(updateUser.fulfilled, (state, action) => {
         state.saving = false
@@ -283,7 +317,7 @@ const adminSlice = createSlice({
       .addCase(updateUser.rejected, saveRejected)
 
       .addCase(fetchApplications.pending, (state) => {
-        state.applicationsStatus = 'loading'
+        if (!state.applications.length) state.applicationsStatus = 'loading'
         state.applicationsError = null
       })
       .addCase(fetchApplications.fulfilled, (state, action) => {

@@ -21,6 +21,7 @@ export default {
           900: '#6b3f0e',
           950: '#3f2103',
         },
+        paper: '#f7f5ef',
       },
       keyframes: {
         rise: {

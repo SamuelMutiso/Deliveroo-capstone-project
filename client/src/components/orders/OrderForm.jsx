@@ -1,6 +1,6 @@
 import Input from '@/components/ui/Input'
 import PlacesAutocomplete from '@/components/map/PlacesAutocomplete'
-
+import UseMyLocation from '@/components/map/UseMyLocation'
 export default function OrderForm({ values, errors, categories, onChange }) {
   const set = (patch) => onChange({ ...values, ...patch })
 
@@ -14,6 +14,7 @@ export default function OrderForm({ values, errors, categories, onChange }) {
           error={errors.pickup}
           placeholder="Sarit Centre, Westlands"
         />
+        <UseMyLocation onPick={(pickup) => set({ pickup })} />
         <PlacesAutocomplete
           label="Destination"
           value={values.destination}

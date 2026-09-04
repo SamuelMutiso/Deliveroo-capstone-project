@@ -11,6 +11,7 @@ export const ordersApi = {
   changeDestination: (id, payload) =>
     axiosClient.patch(`/orders/${id}/destination`, payload).then((r) => r.data),
   cancel: (id) => axiosClient.patch(`/orders/${id}/cancel`).then((r) => r.data),
+  rate: (id, payload) => axiosClient.post(`/orders/${id}/rating`, payload).then((r) => r.data),
 }
 
 export const courierApi = {
@@ -20,6 +21,7 @@ export const courierApi = {
     axiosClient.patch(`/courier/orders/${id}/status`, payload).then((r) => r.data),
   pushLocation: (id, payload) =>
     axiosClient.patch(`/courier/orders/${id}/location`, payload).then((r) => r.data),
+  declareCash: (id) => axiosClient.post(`/courier/orders/${id}/cash`).then((r) => r.data),
   setAvailability: (isAvailable) =>
     axiosClient
       .patch('/courier/availability', { is_available: isAvailable })

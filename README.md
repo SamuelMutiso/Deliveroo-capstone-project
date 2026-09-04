@@ -1,19 +1,115 @@
 # Deliveroo
 
-Full-stack parcel delivery management platform.
+Parcel delivery management for Nairobi. A customer books a parcel and sees the price before
+confirming, a rider carries it and writes each stage from the road, and an operations team
+assigns riders and watches the network. Everything a customer is told is generated from the
+same record the rider updated.
 
-## Getting the project on your machine
+**Live app** — https://deliveroo-capstone-project.vercel.app
+**API** — https://deliveroo-api-l7fs.onrender.com/api/health
 
-You are a collaborator on this repository, so clone it. Do not fork it.
+Moringa School · Module 6 capstone · Samuel Mutiso, Alexander, David, James, Michelle
+
+---
+
+## What it does
+
+**Customers** get a quote from the real road distance and a weight band before they commit,
+follow the parcel through every stage, pay with M-Pesa, and receive a signed receipt they can
+verify publicly.
+
+**Riders** see only the deliveries assigned to them, advance each stage, share live position
+while carrying a parcel, record who received it, and track their own earnings.
+
+**Operations** assign riders, correct mistakes, confirm cash payments, review rider
+applications, and watch daily volume and courier performance from a dashboard.
+
+Anyone at all can price a route and track a parcel from the home page without an account.
+
+---
+
+## Stack
+
+| Layer | Built with | Hosted on |
+| --- | --- | --- |
+| Client | React 18, Redux Toolkit, React Router, Vite, Tailwind CSS, Leaflet, Recharts | Vercel |
+| API | Flask, SQLAlchemy, Alembic, Marshmallow, Flask-JWT-Extended, gunicorn | Render |
+| Database | PostgreSQL — 8 models, 10 migrations | Render |
+| Integrations | M-Pesa Daraja, Gmail API, OpenStreetMap (Nominatim + OSRM), Google Sign-In | — |
+
+64 REST endpoints, 172 automated tests.
+
+---
+
+## MAPS USED
+
+**OpenStreetMap instead of Google Maps.** A Google Maps key has to ship to the browser, where
+anyone can lift it and spend it, and it needs a billing account behind it. OpenStreetMap gives
+the same pickup and destination pins, live rider position, road route, distance and duration
+with no key at all. Geocoding and routing are proxied through our own API, so the browser never
+calls a third party directly and the results are cached and rate limited on our side.
+
+**Gmail API instead of SMTP.** Our host blocks outbound ports 25, 465 and 587, so no SMTP
+library can send mail from production. The Gmail API sends over HTTPS on 443, which is not
+blocked, and it uses our own mailbox rather than a third-party sending account that can be
+suspended.
+
+**Cash payments need two people.** An M-Pesa prompt does not always reach a real phone. When it
+fails a rider can take cash, but the rider only *reports* it — an administrator confirms it
+separately before the order is settled. Nobody can close their own payment.
+
+**A new account confirms its email before it can sign in.** Registration emails a six digit
+code and returns no tokens at all. The code is stored only as a SHA-256 digest, expires in
+fifteen minutes, dies after five wrong guesses, and is retired the moment another is issued.
+Resending says the same thing whether or not the address has an account, so the endpoint cannot
+be used to find out who has registered. Google sign-in skips the step, because Google has
+already proved the address.
+
+**Receipts are signed.** Every delivery receipt carries a keyed digest over the order id,
+tracking code and delivery time. Anyone can check one at `/verify` without an account, and a
+forged receipt fails the check.
+
+**Public tracking reveals nothing personal.** Tracking a parcel by code returns the stage and
+timestamps only — no address, no name, no phone number, no price. There is a test asserting
+each of those fields is absent, so the endpoint cannot be widened by accident.
+
+---
+
+## Running it locally
+
+You do not need PostgreSQL installed. The commands below build a local database for you.
+
+If `pipenv --version` fails, run `pip3 install --user pipenv` first, then open a new terminal.
+
+### Backend — terminal 1
 
 ```bash
-git clone https://github.com/SamuelMutiso/Deliveroo-capstone-project.git
-cd deliveroo
+cd server
+pipenv install --dev
+cp .env.example .env
 ```
 
-## Install
+Open `server/.env` and paste a long random string after each of these two. Change nothing else:
 
-Frontend:
+```
+SECRET_KEY=
+JWT_SECRET_KEY=
+```
+
+Generate them with `python3 -c "import secrets; print(secrets.token_hex(32))"`.
+Never leave a key blank — an empty value is not the same as an absent one, and the app will
+refuse to start.
+
+```bash
+pipenv run upgrade
+pipenv run seed
+pipenv run test
+pipenv run start
+```
+
+`test` must say **172 passed**. The API runs on http://localhost:5555. Leave this terminal open.
+
+### Frontend — terminal 2
 
 ```bash
 cd client
@@ -22,50 +118,75 @@ cp .env.example .env
 npm run dev
 ```
 
-Backend:
+Open http://localhost:5173.
 
-```bash
-cd server
-pipenv install --dev
-cp .env.example .env
+### Seeded logins
+
+```
+admin@deliveroo.co.ke     admin1234
+peter@deliveroo.co.ke     courier1234
+amina@deliveroo.co.ke     customer1234
 ```
 
-## Working on your branch
+---
 
-Start from `development` every time:
+## Project layout
 
-```bash
-git checkout development
-git pull origin development
+```
+server/
+  app/
+    models/        8 SQLAlchemy models
+    resources/     Flask blueprints, one per area
+    schemas/       Marshmallow validation
+    services/      pricing, maps, mpesa, mailer, notifications, receipts
+    utils/         decorators, errors, logging, pagination
+  migrations/      Alembic
+  tests/           172 tests
+client/
+  src/
+    api/           axios clients
+    components/    ui, layout, orders, map, landing, courier, auth
+    features/      Redux Toolkit slices
+    pages/         routed screens by role
 ```
 
-Switch to your own branch and bring it up to date:
+---
+
+## Testing
 
 ```bash
-git checkout <yourname>-frontend
-git merge development
+cd server && pipenv run test
 ```
 
-Commit and push:
+Covers role boundaries (a rider cannot open another rider's delivery), the payment state
+machine including the cash confirmation path, every pricing band, notification fan-out, receipt
+signing and verification, and the privacy limits of the public API.
 
-```bash
-git add .
-git commit -m "short description of what you did"
-git push -u origin <yourname>-frontend
-```
+The test config pins integration credentials to empty values, so the suite passes the same way
+on every machine regardless of what an individual developer has in their own `.env`.
 
-The `-u` is only needed the first time you push a branch. After that, `git push`.
+---
 
-When your work is ready, open a pull request from your branch into `development` on GitHub.
+## Environment
 
-## Branches
+Both apps ship a `.env.example`. Only two variables are required to run locally —
+`SECRET_KEY` and `JWT_SECRET_KEY`. Everything else is optional and falls back to a working
+default: without M-Pesa credentials payments run in simulation, without mail credentials email
+is logged instead of sent, and without a Google client id the sign-in button hides itself.
 
-| Branch | Purpose |
+`.env` is gitignored and must never be committed.
+
+---
+
+## Team
+
+| | |
 | --- | --- |
-| `main` | Deployment only. Never push to it. |
-| `development` | Integration branch. All pull requests go here. |
-| `testing` | Pull from here to test the combined work. |
-| `<name>-frontend` | Your frontend working branch. |
-| `<name>-backend` | Your backend working branch. |
+| Samuel Mutiso | Developer |
+| Alexander | Developer |
+| David | Developer |
+| James | Developer |
+| Michelle | Developer |
 
-Never commit a `.env` file.
+Branching: work happens on `development`, which deploys the API to Render. `main` deploys the
+client to Vercel. Commits are small and single-purpose.

@@ -46,9 +46,9 @@ export const fetchAssignment = createAsyncThunk(
 
 export const advanceStage = createAsyncThunk(
   'couriers/advanceStage',
-  async ({ id, status, note }, { rejectWithValue }) => {
+  async ({ id, status, note, receivedBy }, { rejectWithValue }) => {
     try {
-      const data = await courierApi.advance(id, { status, note })
+      const data = await courierApi.advance(id, { status, note, received_by: receivedBy })
       return data.order
     } catch (error) {
       return rejectWithValue(extractError(error, 'Could not update the delivery stage'))
@@ -64,6 +64,19 @@ export const pushLocation = createAsyncThunk(
       return data.order
     } catch (error) {
       return rejectWithValue(extractError(error, 'Could not share your location'))
+    }
+  },
+)
+
+export const declareCash = createAsyncThunk(
+  'couriers/declareCash',
+  async (id, { rejectWithValue }) => {
+    try {
+      await courierApi.declareCash(id)
+      const data = await courierApi.detail(id)
+      return data.order
+    } catch (error) {
+      return rejectWithValue(extractError(error, 'Could not report the cash payment'))
     }
   },
 )
@@ -107,7 +120,7 @@ const couriersSlice = createSlice({
 
     builder
       .addCase(fetchAssignments.pending, (state) => {
-        state.listStatus = 'loading'
+        if (!state.items.length) state.listStatus = 'loading'
         state.listError = null
       })
       .addCase(fetchAssignments.fulfilled, (state, action) => {
@@ -121,7 +134,7 @@ const couriersSlice = createSlice({
       })
 
       .addCase(fetchAssignment.pending, (state) => {
-        state.detailStatus = 'loading'
+        if (!state.current) state.detailStatus = 'loading'
         state.detailError = null
       })
       .addCase(fetchAssignment.fulfilled, (state, action) => {
@@ -149,6 +162,16 @@ const couriersSlice = createSlice({
       })
       .addCase(pushLocation.fulfilled, applyOrder)
       .addCase(pushLocation.rejected, (state, action) => {
+        state.saving = false
+        state.saveError = action.payload
+      })
+
+      .addCase(declareCash.pending, (state) => {
+        state.saving = true
+        state.saveError = null
+      })
+      .addCase(declareCash.fulfilled, applyOrder)
+      .addCase(declareCash.rejected, (state, action) => {
         state.saving = false
         state.saveError = action.payload
       })

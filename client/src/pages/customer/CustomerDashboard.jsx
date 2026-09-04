@@ -20,7 +20,6 @@ import {
   selectOrdersStatus,
   setFilters,
 } from '@/features/orders/ordersSlice'
-import { useLivePoll } from '@/hooks/useLivePoll'
 import { STATUS_META } from '@/utils/constants'
 import { money } from '@/utils/formatters'
 import { useAuth } from '@/hooks/useAuth'
@@ -46,17 +45,6 @@ export default function CustomerDashboard() {
   useEffect(() => {
     dispatch(setFilters({ search: debouncedSearch, page: 1 }))
   }, [debouncedSearch, dispatch])
-
-  useLivePoll(() =>
-    dispatch(
-      fetchOrders({
-        page: filters.page,
-        per_page: 6,
-        status: filters.status || undefined,
-        search: filters.search || undefined,
-      }),
-    ),
-  )
 
   useEffect(() => {
     dispatch(

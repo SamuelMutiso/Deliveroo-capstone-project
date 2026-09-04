@@ -3,6 +3,8 @@ import { useDispatch } from 'react-redux'
 import { useEffect, useState } from 'react'
 
 import Button from '@/components/ui/Button'
+import Logo from '@/components/layout/Logo'
+import NotificationBell from '@/components/layout/NotificationBell'
 import { logout } from '@/features/auth/authSlice'
 import { useAuth } from '@/hooks/useAuth'
 import { HOME_BY_ROLE, NAV_BY_ROLE, PUBLIC_NAV, ROLE_LABEL } from '@/utils/constants'
@@ -31,10 +33,7 @@ export default function Navbar() {
     <header className="sticky top-0 z-40 border-b border-slate-100 bg-white/90 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-3.5 px-3.5 sm:px-6">
         <Link to={home} className="flex items-center gap-2.5" aria-label="Deliveroo home">
-          <Logo />
-          <span className="font-display text-lg font-bold tracking-tight text-slate-950">
-            Deliveroo
-          </span>
+          <Logo size="md" />
         </Link>
 
         <nav className="hidden items-center gap-0.5 lg:flex" aria-label="Main">
@@ -58,6 +57,7 @@ export default function Navbar() {
         <div className="flex items-center gap-2.5">
           {isAuthenticated ? (
             <>
+              <NotificationBell />
               <div className="hidden items-center gap-2.5 sm:flex">
                 <span className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-100 font-body text-sm font-bold text-brand-800">
                   {initials(user?.name)}
@@ -141,15 +141,5 @@ export default function Navbar() {
         </nav>
       )}
     </header>
-  )
-}
-
-function Logo() {
-  return (
-    <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-400 shadow-inner">
-      <svg viewBox="0 0 32 32" className="h-5 w-5" fill="none" aria-hidden="true">
-        <path d="M8 21 14 9l4 7.5L20 13l4 8z" fill="#3f2103" />
-      </svg>
-    </span>
   )
 }

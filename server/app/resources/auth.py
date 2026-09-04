@@ -1,0 +1,265 @@
+import secrets
+
+from flask import Blueprint, current_app, request
+from flask_jwt_extended import (
+    create_access_token,
+    create_refresh_token,
+    get_jwt,
+    jwt_required,
+)
+
+from ..constants import ROLE_ADMIN, ROLE_CUSTOMER
+from ..extensions import db
+from ..models import PasswordResetToken, User
+from ..models.password_reset import TOKEN_TTL_MINUTES
+from ..schemas import (
+    forgot_password_schema,
+    login_schema,
+    password_change_schema,
+    profile_update_schema,
+    register_schema,
+    resend_code_schema,
+    reset_password_schema,
+    user_schema,
+    verify_email_schema,
+)
+from ..services import google_auth, notifications, verification
+from ..utils.clock import utcnow
+from ..utils.decorators import REVOKED_TOKENS, current_user
+from ..utils.errors import ApiError, ConflictError
+
+auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
+
+
+def issue_tokens(user):
+    claims = {"role": user.role, "name": user.name}
+    identity = str(user.id)
+    return {
+        "access_token": create_access_token(identity=identity, additional_claims=claims),
+        "refresh_token": create_refresh_token(identity=identity, additional_claims=claims),
+    }
+
+
+@auth_bp.post("/register")
+def register():
+    """Create an account and email the code that unlocks it."""
+    data = register_schema.load(request.get_json() or {})
+
+    if data["role"] == ROLE_ADMIN:
+        raise ApiError("Admin accounts are provisioned internally", 403)
+
+    if User.query.filter_by(email=data["email"].lower()).first():
+        raise ConflictError("An account with that email already exists")
+
+    user = User(
+        name=data["name"].strip(),
+        email=data["email"],
+        phone=data.get("phone"),
+        role=data["role"],
+    )
+    user.password = data["password"]
+
+    db.session.add(user)
+    db.session.commit()
+
+    code, minutes = verification.issue(user)
+    notifications.email_verification(user, code, minutes)
+
+    return {
+        "user": user_schema.dump(user),
+        "verification_required": True,
+        "message": f"We sent a 6 digit code to {user.email}. It expires in {minutes} minutes.",
+    }, 201
+
+
+@auth_bp.post("/verify-email")
+def verify_email():
+    """Trade a valid code for a token pair."""
+    data = verify_email_schema.load(request.get_json() or {})
+    user = User.query.filter_by(email=data["email"].lower()).first()
+
+    if user is None:
+        raise ApiError("That code is not right", 400)
+    if user.email_verified:
+        raise ApiError("This account is already confirmed. Sign in instead", 409)
+
+    verification.check(user, data["code"].strip())
+    return {"user": user_schema.dump(user), **issue_tokens(user)}
+
+
+@auth_bp.post("/resend-code")
+def resend_code():
+    """Send another code. Says the same thing whether or not the account exists."""
+    data = resend_code_schema.load(request.get_json() or {})
+    user = User.query.filter_by(email=data["email"].lower()).first()
+
+    wait = verification.RESEND_COOLDOWN_SECONDS
+    if user is not None and not user.email_verified and user.is_active:
+        remaining = verification.seconds_until_resend(user)
+        if remaining == 0:
+            code, minutes = verification.issue(user)
+            notifications.email_verification(user, code, minutes)
+        else:
+            wait = remaining
+
+    return {
+        "message": "If that account still needs confirming, a new code is on its way",
+        "retry_after": wait,
+    }
+
+
+@auth_bp.post("/login")
+def login():
+    """Exchange email and password for a token pair."""
+    data = login_schema.load(request.get_json() or {})
+    user = User.query.filter_by(email=data["email"].lower()).first()
+
+    if user is None or not user.verify_password(data["password"]):
+        raise ApiError("Those credentials did not match our records", 401)
+    if not user.is_active:
+        raise ApiError("This account has been deactivated", 403)
+    if not user.email_verified:
+        return {
+            "message": "Confirm your email address before signing in",
+            "verification_required": True,
+            "email": user.email,
+        }, 403
+
+    return {"user": user_schema.dump(user), **issue_tokens(user)}
+
+
+@auth_bp.post("/google")
+def google_sign_in():
+    """Sign in, or create a customer account, from a verified Google identity."""
+    credential = (request.get_json() or {}).get("credential", "").strip()
+    if not credential:
+        raise ApiError("A Google credential is required", 400)
+
+    profile = google_auth.verify(credential)
+    user = User.query.filter_by(email=profile["email"]).first()
+    created = False
+
+    if user is None:
+        user = User(
+            name=profile["name"],
+            email=profile["email"],
+            role=ROLE_CUSTOMER,
+            photo_url=profile.get("picture"),
+            email_verified=True,
+        )
+        user.password = secrets.token_urlsafe(32)
+        db.session.add(user)
+        db.session.commit()
+        created = True
+    elif not user.is_active:
+        raise ApiError("This account has been deactivated", 403)
+    elif not user.email_verified:
+        user.email_verified = True
+        db.session.commit()
+
+    return (
+        {"user": user_schema.dump(user), "created": created, **issue_tokens(user)},
+        201 if created else 200,
+    )
+
+
+@auth_bp.post("/refresh")
+@jwt_required(refresh=True)
+def refresh():
+    """Issue a fresh access token from a valid refresh token."""
+    user = current_user()
+    claims = {"role": user.role, "name": user.name}
+    return {"access_token": create_access_token(identity=str(user.id), additional_claims=claims)}
+
+
+@auth_bp.get("/me")
+@jwt_required()
+def me():
+    """Return the authenticated user's profile."""
+    return {"user": user_schema.dump(current_user())}
+
+
+@auth_bp.patch("/me")
+@jwt_required()
+def update_me():
+    """Update the authenticated user's own profile fields."""
+    user = current_user()
+    data = profile_update_schema.load(request.get_json() or {})
+    for field, value in data.items():
+        setattr(user, field, value)
+    db.session.commit()
+    return {"user": user_schema.dump(user)}
+
+
+@auth_bp.post("/change-password")
+@jwt_required()
+def change_password():
+    """Swap the signed-in user's password after checking the current one."""
+    user = current_user()
+    data = password_change_schema.load(request.get_json() or {})
+
+    if not user.verify_password(data["current_password"]):
+        raise ApiError("Your current password is not correct", 400)
+    if data["current_password"] == data["new_password"]:
+        raise ApiError("The new password must be different from the current one", 422)
+
+    user.password = data["new_password"]
+    db.session.commit()
+
+    return {"message": "Password updated"}
+
+
+def _reset_link(raw_token):
+    origins = current_app.config.get("CLIENT_ORIGINS") or ["http://localhost:5173"]
+    base = current_app.config.get("APP_BASE_URL") or origins[0]
+    return base.rstrip("/") + "/reset-password?token=" + raw_token
+
+
+@auth_bp.post("/forgot-password")
+def forgot_password():
+    """Start a password reset. The response never reveals whether the email exists."""
+    data = forgot_password_schema.load(request.get_json() or {})
+    email = data["email"].strip().lower()
+
+    user = User.query.filter(db.func.lower(User.email) == email).first()
+
+    if user is not None and user.is_active:
+        PasswordResetToken.query.filter_by(user_id=user.id, used_at=None).update(
+            {"used_at": utcnow()}
+        )
+        record, raw = PasswordResetToken.issue(user)
+        db.session.add(record)
+        db.session.commit()
+        notifications.password_reset(user, _reset_link(raw), TOKEN_TTL_MINUTES)
+
+    return {"message": "If that email is registered, a reset link is on its way."}
+
+
+@auth_bp.post("/reset-password")
+def reset_password():
+    """Finish a password reset using the single-use token from the email."""
+    data = reset_password_schema.load(request.get_json() or {})
+    record = PasswordResetToken.query.filter_by(
+        token_hash=PasswordResetToken.hash_token(data["token"])
+    ).first()
+
+    if record is None or not record.is_valid:
+        raise ApiError("This reset link is invalid or has already been used", 400)
+
+    user = record.user
+    if user is None or not user.is_active:
+        raise ApiError("This account can no longer be reset", 400)
+
+    user.password = data["new_password"]
+    record.used_at = utcnow()
+    db.session.commit()
+
+    return {"message": "Password reset. You can sign in now."}
+
+
+@auth_bp.post("/logout")
+@jwt_required(verify_type=False)
+def logout():
+    """Revoke the presented token so it can no longer be used."""
+    REVOKED_TOKENS.add(get_jwt()["jti"])
+    return {"message": "Signed out"}
