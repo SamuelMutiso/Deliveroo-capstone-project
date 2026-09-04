@@ -454,16 +454,12 @@ export default function Landing() {
         </PageContainer>
       </section>
 
-      <section className="bg-white py-20 sm:py-28">
-        <PageContainer>
-          <Reveal>
-            <NetworkStats />
-          </Reveal>
-        </PageContainer>
-      </section>
-
       <section id="how" className="bg-white py-20 sm:py-28">
         <PageContainer>
+          <Reveal className="mb-14 sm:mb-20">
+            <NetworkStats />
+          </Reveal>
+
           <Reveal>
             <p className="font-body text-[9px] font-semibold uppercase tracking-[0.16em] text-brand-700">
                Send
