@@ -1,6 +1,6 @@
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import Button from "@/components/ui/Button";
 import ErrorMessage from "@/components/ui/ErrorMessage";
@@ -17,7 +17,7 @@ import PriceBreakdown from "@/components/orders/PriceBreakdown";
 import StatusBadge, { PaymentBadge } from "@/components/ui/StatusBadge";
 import StatusStepper from "@/components/orders/StatusStepper";
 import { PageContainer } from "@/components/layout/AppShell";
-import { PageSpinner } from "@/components/ui/Spinner";
+import Spinner, { PageSpinner } from "@/components/ui/Spinner";
 import {
   cancelOrder,
   changeDestination,
@@ -82,6 +82,35 @@ export default function OrderDetail() {
       dispatch(resetPayment());
     };
   }, [dispatch, id]);
+
+  const settling =
+    payment?.status === "processing" || payment?.status === "cash_pending";
+  const previousPaymentStatus = useRef(payment?.status);
+
+  useEffect(() => {
+    if (!settling) return undefined;
+
+    let checks = 0;
+    const timer = window.setInterval(() => {
+      checks += 1;
+      if (checks > 30) {
+        window.clearInterval(timer);
+        return;
+      }
+      dispatch(fetchPayment(id));
+    }, 3000);
+
+    return () => window.clearInterval(timer);
+  }, [dispatch, id, settling]);
+
+  useEffect(() => {
+    const next = payment?.status;
+    const seen = previousPaymentStatus.current;
+    if (next === "paid" && seen && seen !== "paid") {
+      toast.success("Payment received. Your receipt is ready.");
+    }
+    previousPaymentStatus.current = next;
+  }, [payment?.status, toast]);
 
   if (status === "loading" || (status === "idle" && !order)) {
     return (
@@ -154,6 +183,8 @@ export default function OrderDetail() {
   };
 
   const paid = payment?.status === "paid";
+  const awaitingPin = payment?.status === "processing";
+  const awaitingCash = payment?.status === "cash_pending";
 
   return (
     <PageContainer>
@@ -330,6 +361,17 @@ export default function OrderDetail() {
               {paid ? (
                 <p className="rounded-xl bg-brand-100 px-3.5 py-2.5 font-body text-sm text-brand-800">
                   Paid in full. Thank you.
+                </p>
+              ) : awaitingPin ? (
+                <div className="flex items-center gap-3 rounded-xl bg-amber-100 px-3.5 py-2.5">
+                  <Spinner size="sm" />
+                  <p className="font-body text-sm text-amber-800">
+                    Check your phone and enter your M-Pesa PIN. This updates on its own.
+                  </p>
+                </div>
+              ) : awaitingCash ? (
+                <p className="rounded-xl bg-amber-100 px-3.5 py-2.5 font-body text-sm text-amber-800">
+                  Cash reported by the rider. Waiting for our team to confirm it.
                 </p>
               ) : (
                 <Button
