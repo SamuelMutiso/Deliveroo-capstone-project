@@ -34,10 +34,10 @@ Anyone at all can price a route and track a parcel from the home page without an
 | --- | --- | --- |
 | Client | React 18, Redux Toolkit, React Router, Vite, Tailwind CSS, Leaflet, Recharts | Vercel |
 | API | Flask, SQLAlchemy, Alembic, Marshmallow, Flask-JWT-Extended, gunicorn | Render |
-| Database | PostgreSQL — 7 models, 9 migrations | Render |
+| Database | PostgreSQL — 8 models, 10 migrations | Render |
 | Integrations | M-Pesa Daraja, Gmail API, OpenStreetMap (Nominatim + OSRM), Google Sign-In | — |
 
-62 REST endpoints, 140 automated tests.
+64 REST endpoints, 172 automated tests.
 
 ---
 
@@ -57,6 +57,13 @@ suspended.
 **Cash payments need two people.** An M-Pesa prompt does not always reach a real phone. When it
 fails a rider can take cash, but the rider only *reports* it — an administrator confirms it
 separately before the order is settled. Nobody can close their own payment.
+
+**A new account confirms its email before it can sign in.** Registration emails a six digit
+code and returns no tokens at all. The code is stored only as a SHA-256 digest, expires in
+fifteen minutes, dies after five wrong guesses, and is retired the moment another is issued.
+Resending says the same thing whether or not the address has an account, so the endpoint cannot
+be used to find out who has registered. Google sign-in skips the step, because Google has
+already proved the address.
 
 **Receipts are signed.** Every delivery receipt carries a keyed digest over the order id,
 tracking code and delivery time. Anyone can check one at `/verify` without an account, and a
@@ -100,7 +107,7 @@ pipenv run test
 pipenv run start
 ```
 
-`test` must say **140 passed**. The API runs on http://localhost:5555. Leave this terminal open.
+`test` must say **172 passed**. The API runs on http://localhost:5555. Leave this terminal open.
 
 ### Frontend — terminal 2
 
@@ -128,13 +135,13 @@ amina@deliveroo.co.ke     customer1234
 ```
 server/
   app/
-    models/        7 SQLAlchemy models
+    models/        8 SQLAlchemy models
     resources/     Flask blueprints, one per area
     schemas/       Marshmallow validation
     services/      pricing, maps, mpesa, mailer, notifications, receipts
     utils/         decorators, errors, logging, pagination
   migrations/      Alembic
-  tests/           140 tests
+  tests/           172 tests
 client/
   src/
     api/           axios clients
