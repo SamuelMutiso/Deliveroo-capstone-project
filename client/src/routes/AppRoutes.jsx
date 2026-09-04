@@ -23,6 +23,7 @@ import Register from "@/pages/auth/Register";
 import ResetPassword from "@/pages/auth/ResetPassword";
 import Services from "@/pages/Services";
 import Terms from "@/pages/Terms";
+import VerifyEmail from "@/pages/auth/VerifyEmail";
 import VerifyReceipt from "@/pages/VerifyReceipt";
 import ProtectedRoute from "./ProtectedRoute";
 import RoleRoute from "./RoleRoute";
@@ -40,6 +41,7 @@ export default function AppRoutes() {
       {/* Authentication */}
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/verify-email" element={<VerifyEmail />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
 
