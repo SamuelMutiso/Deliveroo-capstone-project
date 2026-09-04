@@ -1,4 +1,4 @@
-import { Link, Navigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { useState } from 'react'
 import { Eye, EyeOff } from 'lucide-react'
@@ -15,6 +15,7 @@ import { useAuth } from '@/hooks/useAuth'
 
 export default function Register() {
   const dispatch = useDispatch()
+  const navigate = useNavigate()
   const serverError = useSelector(selectAuthError)
   const { isAuthenticated, role, submitting } = useAuth()
 
@@ -41,21 +42,26 @@ export default function Register() {
     setValues((current) => ({ ...current, ...patch }))
   }
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault()
     const found = validateRegister(values)
     setErrors(found)
     if (!isEmpty(found)) return
 
-    dispatch(
+    const email = values.email.trim()
+    const result = await dispatch(
       register({
         name: values.name.trim(),
-        email: values.email.trim(),
+        email,
         phone: values.phone.trim() || null,
         password: values.password,
         role: values.role,
       }),
     )
+
+    if (register.fulfilled.match(result)) {
+      navigate('/verify-email', { state: { email } })
+    }
   }
 
   return (
