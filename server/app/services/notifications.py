@@ -16,6 +16,7 @@ CANCELLED = "cancelled"
 PAYMENT_RECEIVED = "payment_received"
 CASH_DECLARED = "cash_declared"
 RIDER_APPLIED = "rider_applied"
+EMAIL_VERIFICATION = "email_verification"
 
 STATUS_EVENTS = {
     "picked_up": PICKED_UP,
@@ -503,6 +504,34 @@ def password_reset(user, link, minutes):
         plain,
         mailer.wrap_plain_html(title, paragraphs, "Deliveroo Logistics, Nairobi"),
     )
+
+def email_verification(user, code, minutes):
+    """Send the one time code a new account needs before it can sign in."""
+    recipient = user.contact_email or user.email
+    if not recipient:
+        return False
+
+    first = (user.name or "there").split()[0]
+    title = "Confirm your email address"
+    paragraphs = [
+        "Hi " + first + ", welcome to Deliveroo. Use this code to finish setting up your account.",
+        "<div style='font-family:monospace;font-size:30px;font-weight:700;letter-spacing:10px;"
+        "padding:18px 0'>" + code + "</div>",
+        "The code expires in " + str(minutes) + " minutes and can only be used once.",
+        "If you did not create a Deliveroo account, ignore this email.",
+    ]
+    plain = (
+        "Hi " + first + ", your Deliveroo confirmation code is " + code + ".\n"
+        "It expires in " + str(minutes) + " minutes and can only be used once.\n"
+        "If you did not create a Deliveroo account, ignore this email."
+    )
+    return mailer.send_email(
+        title,
+        recipient,
+        plain,
+        mailer.wrap_plain_html(title, paragraphs, "Deliveroo Logistics, Nairobi"),
+    )
+
 
 def rider_application(application):
     """Tell every admin that a customer has applied to ride, and confirm it to the applicant."""
