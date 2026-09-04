@@ -153,9 +153,9 @@ export const CONTACT = {
     "Nairobi, Kenya",
   ],
   mapsQuery: "Sarit Centre, Karuna Road, Westlands, Nairobi",
-  phoneDisplay: "+254 712 345 678",
-  phoneDial: "+254712345678",
-  email: "hello@deliveroo.co.ke",
+  phoneDisplay: "0795 038 762",
+  phoneDial: "+254795038762",
+  email: "deliveroo.capstone@gmail.com",
   hours: "Monday to Saturday, 7:00 AM to 8:00 PM EAT",
 };
 
