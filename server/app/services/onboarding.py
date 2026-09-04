@@ -42,6 +42,7 @@ def create_rider_account(application):
         contact_email=application.applicant.notification_email,
         phone=application.phone,
         role=ROLE_COURIER,
+        email_verified=True,
         vehicle=application.vehicle_label,
         photo_url=application.profile_photo_url,
         is_available=False,

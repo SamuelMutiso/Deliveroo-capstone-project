@@ -116,7 +116,9 @@ STAGE_NOTES = {
 
 
 def make_user(name, email, phone, role, password, vehicle=None):
-    user = User(name=name, email=email, phone=phone, role=role, vehicle=vehicle)
+    user = User(
+        name=name, email=email, phone=phone, role=role, vehicle=vehicle, email_verified=True
+    )
     user.password = password
     db.session.add(user)
     return user
