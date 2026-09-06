@@ -8,6 +8,7 @@ import AdminOrders from "@/pages/admin/AdminOrders";
 import AdminUserDetail from "@/pages/admin/AdminUserDetail";
 import AdminUsers from "@/pages/admin/AdminUsers";
 import BecomeCourier from "@/pages/customer/BecomeCourier";
+import ChangeTemporaryPassword from "@/pages/auth/ChangeTemporaryPassword";
 import CourierDashboard from "@/pages/courier/CourierDashboard";
 import CourierOrderDetail from "@/pages/courier/CourierOrderDetail";
 import CustomerDashboard from "@/pages/customer/CustomerDashboard";
@@ -23,6 +24,7 @@ import Register from "@/pages/auth/Register";
 import ResetPassword from "@/pages/auth/ResetPassword";
 import Services from "@/pages/Services";
 import Terms from "@/pages/Terms";
+import TrackDelivery from "@/pages/TrackDelivery";
 import VerifyEmail from "@/pages/auth/VerifyEmail";
 import VerifyReceipt from "@/pages/VerifyReceipt";
 import ProtectedRoute from "./ProtectedRoute";
@@ -35,6 +37,8 @@ export default function AppRoutes() {
       <Route path="/about" element={<About />} />
       <Route path="/services" element={<Services />} />
       <Route path="/verify" element={<VerifyReceipt />} />
+      <Route path="/track" element={<TrackDelivery />} />
+      <Route path="/track/:code" element={<TrackDelivery />} />
       <Route path="/terms" element={<Terms />} />
       <Route path="/privacy" element={<Privacy />} />
 
@@ -46,6 +50,8 @@ export default function AppRoutes() {
       <Route path="/reset-password" element={<ResetPassword />} />
 
       <Route element={<ProtectedRoute />}>
+        <Route path="/set-password" element={<ChangeTemporaryPassword />} />
+
         <Route path="/profile" element={<Profile />} />
 
         <Route element={<RoleRoute allow={[ROLES.CUSTOMER]} />}>
