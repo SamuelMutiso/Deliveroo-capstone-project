@@ -43,10 +43,7 @@ def register_error_handlers(app):
     @app.errorhandler(429)
     def handle_rate_limited(error):
         app.logger.warning("Rate limit hit on %s %s", request.method, request.path)
-        return {
-            "message": "Too many requests. Give it a minute and try again.",
-            "retry_after": getattr(error, "retry_after", None),
-        }, 429
+        return {"message": "Too many requests. Give it a minute and try again."}, 429
 
     @app.errorhandler(ValidationError)
     def handle_validation_error(error):
