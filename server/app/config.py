@@ -54,6 +54,12 @@ class Config:
     MAIL_PORT = int(os.getenv("MAIL_PORT", "587"))
     MAIL_DEBUG = False
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
+
+    REDIS_URL = os.getenv("REDIS_URL", "")
+    RATELIMIT_STORAGE_URI = REDIS_URL or "memory://"
+    RATELIMIT_STRATEGY = "fixed-window"
+    RATELIMIT_HEADERS_ENABLED = True
+    RATELIMIT_ENABLED = _flag("RATELIMIT_ENABLED", "1")
     MAIL_USE_TLS = _flag("MAIL_USE_TLS", "1")
     MAIL_USE_SSL = _flag("MAIL_USE_SSL", "0")
     MAIL_USERNAME = os.getenv("MAIL_USERNAME", "")
@@ -107,6 +113,7 @@ class TestingConfig(Config):
     SQLALCHEMY_DATABASE_URI = "sqlite://"
     MAIL_SUPPRESS_SEND = True
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(minutes=15)
+    RATELIMIT_STORAGE_URI = "memory://"
 
 
 class ProductionConfig(Config):
