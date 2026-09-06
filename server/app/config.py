@@ -44,6 +44,12 @@ class Config:
     NOMINATIM_URL = os.getenv("NOMINATIM_URL", "https://nominatim.openstreetmap.org")
     OSRM_URL = os.getenv("OSRM_URL", "https://router.project-osrm.org")
     GEO_COUNTRY_CODES = os.getenv("GEO_COUNTRY_CODES", "ke")
+
+    SERVICE_AREA_NAME = os.getenv("SERVICE_AREA_NAME", "Nairobi County")
+    SERVICE_AREA_SOUTH = float(os.getenv("SERVICE_AREA_SOUTH", "-1.4447"))
+    SERVICE_AREA_NORTH = float(os.getenv("SERVICE_AREA_NORTH", "-1.1607"))
+    SERVICE_AREA_WEST = float(os.getenv("SERVICE_AREA_WEST", "36.6446"))
+    SERVICE_AREA_EAST = float(os.getenv("SERVICE_AREA_EAST", "37.1050"))
     GEO_OFFLINE = _flag("GEO_OFFLINE", "0")
     GEO_USER_AGENT = os.getenv(
         "GEO_USER_AGENT",
