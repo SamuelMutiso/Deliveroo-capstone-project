@@ -7,6 +7,7 @@ from math import asin, cos, radians, sin, sqrt
 import requests
 from flask import current_app
 
+from ..utils import geofence
 from ..utils.errors import ApiError
 
 REQUEST_TIMEOUT = 10
@@ -105,6 +106,8 @@ def search(query, limit=6):
                 "format": "json",
                 "limit": limit,
                 "countrycodes": _config("GEO_COUNTRY_CODES", "ke"),
+                "viewbox": geofence.viewbox(),
+                "bounded": 1,
                 "addressdetails": 0,
             },
         )
