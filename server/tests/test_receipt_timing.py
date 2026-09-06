@@ -1,3 +1,4 @@
+import threading
 import time
 
 import pytest
@@ -31,6 +32,13 @@ def receipts_in(outbox):
     return [message for message in outbox if message["subject"].startswith("Receipt ·")]
 
 
+def quiesce(timeout=3.0):
+    """The simulated settlement runs on a thread. Let it finish before touching the db again."""
+    for thread in threading.enumerate():
+        if thread is not threading.current_thread():
+            thread.join(timeout=timeout)
+
+
 def settle(client, headers, order):
     client.post(
         f"/api/payments/{order['id']}/mpesa", headers=headers, json={"phone": "0712345678"}
@@ -40,8 +48,10 @@ def settle(client, headers, order):
             "payment"
         ]
         if payment["status"] == PAYMENT_PAID:
+            quiesce()
             return payment
         time.sleep(0.1)
+    quiesce()
     return payment
 
 
@@ -80,24 +90,31 @@ def test_delivering_an_unpaid_parcel_sends_no_receipt(
     assert receipts_in(outbox) == [], "a receipt went out before anyone paid"
 
 
-def test_the_receipt_arrives_when_the_payment_clears(
-    client, as_customer, created_order, outbox
-):
+def test_paying_early_does_not_send_a_receipt_yet(client, as_customer, created_order, outbox):
     payment = settle(client, as_customer, created_order)
 
     assert payment["status"] == PAYMENT_PAID
-    assert wait_for_receipt(outbox), "no receipt after the payment cleared"
+    assert wait_for_receipt(outbox, timeout=1.0) == [], "a receipt went out before delivery"
 
 
-def test_the_receipt_does_not_wait_for_delivery(client, as_customer, created_order, outbox):
+def test_the_receipt_arrives_once_the_parcel_is_paid_and_delivered(
+    client, as_customer, as_admin, courier, created_order, outbox
+):
     settle(client, as_customer, created_order)
+    client.patch(
+        f"/api/admin/orders/{created_order['id']}/assign",
+        headers=as_admin,
+        json={"courier_id": courier.id},
+    )
+    advance(client, as_admin, created_order["id"], "picked_up", "in_transit", "delivered")
 
-    body = wait_for_receipt(outbox)[0]["body"]
-    assert "We have received" in body
-    assert created_order["tracking_code"] in body
+    found = wait_for_receipt(outbox)
+    assert found, "no receipt once both conditions were met"
+    assert created_order["tracking_code"] in found[0]["body"]
+    assert "Delivered to" in found[0]["body"]
 
 
-def test_a_confirmed_cash_payment_also_sends_the_receipt(
+def test_cash_confirmed_after_delivery_sends_the_receipt(
     client, as_admin, as_courier, courier, created_order, outbox
 ):
     client.patch(
@@ -106,6 +123,7 @@ def test_a_confirmed_cash_payment_also_sends_the_receipt(
         json={"courier_id": courier.id},
     )
     client.post(f"/api/courier/orders/{created_order['id']}/cash", headers=as_courier)
+    advance(client, as_admin, created_order["id"], "picked_up", "in_transit", "delivered")
 
     assert receipts_in(outbox) == [], "a rider reporting cash is not a confirmed payment"
 
@@ -114,11 +132,10 @@ def test_a_confirmed_cash_payment_also_sends_the_receipt(
     assert receipts_in(outbox), "no receipt after the admin confirmed the cash"
 
 
-def test_a_receipt_is_only_ever_sent_once(client, as_customer, as_admin, courier, created_order, outbox):
+def test_a_receipt_is_only_ever_sent_once(
+    client, as_customer, as_admin, courier, created_order, outbox
+):
     settle(client, as_customer, created_order)
-    before = len(wait_for_receipt(outbox))
-    assert before == 1
-
     client.patch(
         f"/api/admin/orders/{created_order['id']}/assign",
         headers=as_admin,
@@ -126,4 +143,9 @@ def test_a_receipt_is_only_ever_sent_once(client, as_customer, as_admin, courier
     )
     advance(client, as_admin, created_order["id"], "picked_up", "in_transit", "delivered")
 
-    assert len(receipts_in(outbox)) == before, "delivery sent a second receipt"
+    before = len(wait_for_receipt(outbox))
+    assert before == 1
+
+    advance(client, as_admin, created_order["id"], "delivered")
+
+    assert len(receipts_in(outbox)) == before, "a repeated status change sent a second receipt"
