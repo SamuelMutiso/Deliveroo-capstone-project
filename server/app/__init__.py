@@ -1,7 +1,8 @@
 from flask import Flask, jsonify
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from .config import get_config
-from .extensions import bcrypt, cors, db, jwt, mail, migrate
+from .extensions import bcrypt, cors, db, jwt, limiter, mail, migrate
 from .resources import BLUEPRINTS
 from .utils.decorators import REVOKED_TOKENS
 from .utils.errors import register_error_handlers
@@ -12,6 +13,8 @@ def create_app(config_name=None):
     app = Flask(__name__)
     app.config.from_object(get_config(config_name))
 
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
+
     configure_logging(app)
 
     db.init_app(app)
@@ -19,6 +22,7 @@ def create_app(config_name=None):
     bcrypt.init_app(app)
     jwt.init_app(app)
     mail.init_app(app)
+    limiter.init_app(app)
     cors.init_app(
         app,
         resources={r"/api/*": {"origins": app.config["CLIENT_ORIGINS"]}},
