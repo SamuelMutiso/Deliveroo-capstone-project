@@ -192,6 +192,13 @@ const authSlice = createSlice({
       .addCase(updateProfile.fulfilled, (state, action) => {
         state.user = action.payload
       })
+      .addCase(changePassword.fulfilled, (state, action) => {
+        if (action.payload?.user) state.user = action.payload.user
+        state.error = null
+      })
+      .addCase(changePassword.rejected, (state, action) => {
+        state.error = action.payload
+      })
       .addCase(logout.fulfilled, (state) => {
         state.user = null
         state.status = 'guest'
