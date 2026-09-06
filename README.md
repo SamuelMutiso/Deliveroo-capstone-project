@@ -65,9 +65,11 @@ Resending says the same thing whether or not the address has an account, so the 
 be used to find out who has registered. Google sign-in skips the step, because Google has
 already proved the address.
 
-**The receipt follows the money, not the parcel.** It is generated when a payment clears — the
-M-Pesa callback succeeding or an admin confirming cash — and never on delivery alone. A retried
-callback cannot send a second one.
+**A receipt needs both halves of the transaction.** It is issued only once the parcel is
+delivered *and* the payment has cleared, in whichever order those happen — the receipt link, the
+receipt page and the emailed copy all appear at that same moment. Paying up front gets an
+immediate "payment received" note instead. This keeps the document honest: `/verify` refuses to
+verify an undelivered receipt, so a receipt never exists that fails its own check.
 
 **Receipts are signed.** Every delivery receipt carries a keyed digest over the order id,
 tracking code and delivery time. Anyone can check one at `/verify` without an account, and a
