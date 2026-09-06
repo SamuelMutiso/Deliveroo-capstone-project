@@ -1,6 +1,7 @@
-from marshmallow import Schema, fields, validate
+from marshmallow import Schema, fields, validate, validates_schema
 
 from ..constants import ORDER_STATUSES, WEIGHT_CATEGORIES
+from ..utils import geofence
 from ..utils.phone import PhoneField
 from .tracking_schema import TrackingEventSchema
 from .user_schema import UserSummarySchema
@@ -86,11 +87,27 @@ class OrderCreateSchema(Schema):
     recipient_email = fields.Email(load_default=None, allow_none=True)
     notes = fields.Str(load_default=None, allow_none=True, validate=validate.Length(max=400))
 
+    @validates_schema
+    def inside_the_service_area(self, data, **_kwargs):
+        geofence.ensure_inside(
+            data,
+            [
+                ("pickup_lat", "pickup_lng", "The pickup point"),
+                ("destination_lat", "destination_lng", "The destination"),
+            ],
+        )
+
 
 class DestinationUpdateSchema(Schema):
     destination_address = fields.Str(required=True, validate=validate.Length(min=4, max=255))
     destination_lat = fields.Float(required=True, validate=LAT)
     destination_lng = fields.Float(required=True, validate=LNG)
+
+    @validates_schema
+    def inside_the_service_area(self, data, **_kwargs):
+        geofence.ensure_inside(
+            data, [("destination_lat", "destination_lng", "The destination")]
+        )
 
 
 class LocationUpdateSchema(Schema):
@@ -123,6 +140,16 @@ class QuoteSchema(Schema):
     destination_lng = fields.Float(required=True, validate=LNG)
     weight_category = fields.Str(required=True, validate=validate.OneOf(list(WEIGHT_CATEGORIES)))
     weight_kg = fields.Float(load_default=None, allow_none=True, validate=validate.Range(min=0.1, max=50))
+
+    @validates_schema
+    def inside_the_service_area(self, data, **_kwargs):
+        geofence.ensure_inside(
+            data,
+            [
+                ("pickup_lat", "pickup_lng", "The pickup point"),
+                ("destination_lat", "destination_lng", "The destination"),
+            ],
+        )
 
 
 order_schema = OrderSchema()
