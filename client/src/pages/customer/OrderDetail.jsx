@@ -83,6 +83,10 @@ export default function OrderDetail() {
     };
   }, [dispatch, id]);
 
+  const receiptReady =
+    order?.status === "delivered" &&
+    (payment?.status || order?.payment_status) === "paid";
+
   const settling =
     payment?.status === "processing" || payment?.status === "cash_pending";
   const previousPaymentStatus = useRef(payment?.status);
@@ -207,13 +211,15 @@ export default function OrderDetail() {
         <div className="flex flex-wrap items-center gap-2.5">
           <StatusBadge status={order.status} />
           <PaymentBadge status={payment?.status || order.payment_status} />
-          <Link
-            to={`/orders/${order.id}/receipt`}
-            className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3.5 py-1.5 font-body text-sm font-semibold text-slate-700 transition hover:bg-slate-200"
-          >
-            <FileText className="h-3.5 w-3.5" aria-hidden="true" />
-            Receipt
-          </Link>
+          {receiptReady && (
+            <Link
+              to={`/orders/${order.id}/receipt`}
+              className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3.5 py-1.5 font-body text-sm font-semibold text-slate-700 transition hover:bg-slate-200"
+            >
+              <FileText className="h-3.5 w-3.5" aria-hidden="true" />
+              Receipt
+            </Link>
+          )}
         </div>
       </div>
 

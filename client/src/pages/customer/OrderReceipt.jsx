@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Link, useParams } from 'react-router-dom'
-import { Printer } from 'lucide-react'
+import { FileClock, Printer } from 'lucide-react'
 
 import Button from '@/components/ui/Button'
 import ErrorMessage from '@/components/ui/ErrorMessage'
@@ -49,6 +49,35 @@ export default function OrderReceipt() {
   }
 
   if (!order) return null
+
+  const paid = (payment?.status || order.payment_status) === 'paid'
+  const delivered = order.status === 'delivered'
+
+  if (!paid || !delivered) {
+    return (
+      <PageContainer className="max-w-2xl">
+        <div className="rounded-2xl bg-white p-8 text-center shadow-sm ring-1 ring-inset ring-slate-100">
+          <FileClock className="mx-auto h-8 w-8 text-slate-300" aria-hidden="true" />
+          <h1 className="mt-4 font-display text-2xl font-bold tracking-tight text-slate-950">
+            No receipt yet
+          </h1>
+          <p className="mx-auto mt-2 max-w-sm font-body text-base text-slate-500">
+            {!paid && !delivered
+              ? 'A receipt is issued once the parcel is delivered and the payment has cleared.'
+              : !paid
+                ? 'The parcel has arrived. The receipt is issued as soon as the payment clears.'
+                : 'The payment has cleared. The receipt is issued once the parcel is delivered.'}
+          </p>
+          <Link
+            to={`/orders/${order.id}`}
+            className="mt-5 inline-block font-body text-sm font-semibold text-brand-700 underline-offset-4 hover:underline"
+          >
+            Back to the delivery
+          </Link>
+        </div>
+      </PageContainer>
+    )
+  }
 
   const lines = order.price_breakdown?.lines || []
 
