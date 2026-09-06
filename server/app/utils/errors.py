@@ -40,6 +40,14 @@ def register_error_handlers(app):
     def handle_api_error(error):
         return error.to_dict(), error.status_code
 
+    @app.errorhandler(429)
+    def handle_rate_limited(error):
+        app.logger.warning("Rate limit hit on %s %s", request.method, request.path)
+        return {
+            "message": "Too many requests. Give it a minute and try again.",
+            "retry_after": getattr(error, "retry_after", None),
+        }, 429
+
     @app.errorhandler(ValidationError)
     def handle_validation_error(error):
         return {"message": "Validation failed", "errors": error.messages}, 422
