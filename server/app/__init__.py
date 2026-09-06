@@ -4,7 +4,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from .config import get_config
 from .extensions import bcrypt, cors, db, jwt, limiter, mail, migrate
 from .resources import BLUEPRINTS
-from .utils.decorators import REVOKED_TOKENS
+from .utils.decorators import REVOKED_TOKENS, register_password_change_gate
 from .utils.errors import register_error_handlers
 from .utils.logging import configure_logging
 
@@ -33,6 +33,7 @@ def create_app(config_name=None):
 
     register_jwt_callbacks()
     register_error_handlers(app)
+    register_password_change_gate(app)
 
     for blueprint in BLUEPRINTS:
         app.register_blueprint(blueprint)

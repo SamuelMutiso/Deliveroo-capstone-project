@@ -1,5 +1,6 @@
 from functools import wraps
 
+from flask import request
 from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
 
 from ..constants import ROLE_ADMIN, ROLE_COURIER, ROLE_CUSTOMER
@@ -57,3 +58,38 @@ def owned_order_or_404(order_id, user):
     if user.role == ROLE_COURIER and order.courier_id == user.id:
         return order
     raise ForbiddenError("You do not have access to this order")
+
+PASSWORD_CHANGE_ALLOWED = {
+    "auth.change_password",
+    "auth.logout",
+    "auth.me",
+    "auth.refresh",
+    "health",
+}
+
+
+def register_password_change_gate(app):
+    """A temporary password opens one door only: the one that replaces it."""
+
+    @app.before_request
+    def block_until_password_changed():
+        if request.method == "OPTIONS" or request.endpoint in PASSWORD_CHANGE_ALLOWED:
+            return None
+
+        try:
+            verify_jwt_in_request(optional=True)
+        except Exception:
+            return None
+
+        identity = get_jwt_identity()
+        if identity is None:
+            return None
+
+        user = db.session.get(User, int(identity))
+        if user is not None and user.must_change_password:
+            return {
+                "message": "Change your temporary password before you continue",
+                "password_change_required": True,
+            }, 403
+
+        return None
