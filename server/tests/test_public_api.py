@@ -1,6 +1,8 @@
-import pytest
+from datetime import timedelta
 
-from app.resources import public as public_resource
+from app.extensions import db, limiter
+from app.models import Order
+from app.utils.clock import utcnow
 
 NAIROBI = {
     "pickup_lat": -1.2609,
@@ -9,13 +11,6 @@ NAIROBI = {
     "destination_lng": 36.7085,
     "weight_category": "standard",
 }
-
-
-@pytest.fixture(autouse=True)
-def fresh_throttle():
-    public_resource._hits.clear()
-    yield
-    public_resource._hits.clear()
 
 
 def test_the_weight_bands_are_public(client):
@@ -119,7 +114,67 @@ def test_a_short_tracking_code_is_refused(client):
 
 
 def test_the_public_api_is_rate_limited(client):
-    for _ in range(public_resource.MAX_CALLS):
-        assert client.get("/api/public/stats").status_code == 200
+    limiter.enabled = True
 
+    allowed = 0
+    for _ in range(40):
+        if client.get("/api/public/stats").status_code == 429:
+            break
+        allowed += 1
+
+    assert allowed == 30
     assert client.get("/api/public/stats").status_code == 429
+
+
+def test_tracking_is_limited_harder_than_browsing(client, created_order):
+    limiter.enabled = True
+    code = created_order["tracking_code"]
+
+    allowed = 0
+    for _ in range(20):
+        if client.get(f"/api/public/track/{code}").status_code == 429:
+            break
+        allowed += 1
+
+    assert allowed == 10, "a guesser should get far fewer tracking lookups than page loads"
+
+
+def test_a_rate_limited_caller_is_told_why(client):
+    limiter.enabled = True
+    for _ in range(31):
+        response = client.get("/api/public/stats")
+
+    assert response.status_code == 429
+    assert "Too many requests" in response.get_json()["message"]
+
+
+def _close(code, days_ago):
+    order = Order.query.filter_by(tracking_code=code).one()
+    order.status = "delivered"
+    order.delivered_at = utcnow() - timedelta(days=days_ago)
+    db.session.commit()
+
+
+def test_a_recently_delivered_parcel_still_tracks(client, created_order):
+    _close(created_order["tracking_code"], days_ago=2)
+
+    response = client.get(f"/api/public/track/{created_order['tracking_code']}")
+
+    assert response.status_code == 200
+    assert response.get_json()["parcel"]["expires_at"]
+
+
+def test_tracking_stops_working_a_week_after_delivery(client, created_order):
+    _close(created_order["tracking_code"], days_ago=8)
+
+    response = client.get(f"/api/public/track/{created_order['tracking_code']}")
+
+    assert response.status_code == 410
+    assert "expired" in response.get_json()["message"].lower()
+
+
+def test_an_open_parcel_never_expires(client, created_order):
+    response = client.get(f"/api/public/track/{created_order['tracking_code']}")
+
+    assert response.status_code == 200
+    assert response.get_json()["parcel"]["expires_at"] is None

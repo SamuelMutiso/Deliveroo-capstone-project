@@ -3,6 +3,7 @@ import pytest
 from app import create_app
 from app.constants import ROLE_ADMIN, ROLE_COURIER, ROLE_CUSTOMER
 from app.extensions import db as _db
+from app.extensions import limiter
 from app.models import User
 
 
@@ -14,6 +15,16 @@ def app():
         yield application
         _db.session.remove()
         _db.drop_all()
+
+
+@pytest.fixture(autouse=True)
+def quiet_limiter(app):
+    """Rate limits are off unless a test switches them on, and never leak between tests."""
+    limiter.enabled = False
+    limiter.reset()
+    yield
+    limiter.enabled = False
+    limiter.reset()
 
 
 @pytest.fixture
