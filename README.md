@@ -34,10 +34,10 @@ Anyone at all can price a route and track a parcel from the home page without an
 | --- | --- | --- |
 | Client | React 18, Redux Toolkit, React Router, Vite, Tailwind CSS, Leaflet, Recharts | Vercel |
 | API | Flask, SQLAlchemy, Alembic, Marshmallow, Flask-JWT-Extended, gunicorn | Render |
-| Database | PostgreSQL — 8 models, 10 migrations | Render |
+| Database | PostgreSQL — 9 models, 11 migrations | Render |
 | Integrations | M-Pesa Daraja, Gmail API, OpenStreetMap (Nominatim + OSRM), Google Sign-In | — |
 
-64 REST endpoints, 172 automated tests.
+67 REST endpoints, 201 automated tests.
 
 ---
 
@@ -65,9 +65,27 @@ Resending says the same thing whether or not the address has an account, so the 
 be used to find out who has registered. Google sign-in skips the step, because Google has
 already proved the address.
 
+**The receipt follows the money, not the parcel.** It is generated when a payment clears — the
+M-Pesa callback succeeding or an admin confirming cash — and never on delivery alone. A retried
+callback cannot send a second one.
+
 **Receipts are signed.** Every delivery receipt carries a keyed digest over the order id,
 tracking code and delivery time. Anyone can check one at `/verify` without an account, and a
 forged receipt fails the check.
+
+**Rate limiting is shared, not per process.** Counting requests in a Python dictionary is
+worthless behind more than one worker — each one keeps its own tally, so the real limit is
+however many processes are running, and a restart clears it. Flask-Limiter counts in Redis
+instead, so every worker and every instance reads the same number. The app also sits behind
+ProxyFix, otherwise every request would look like it came from our host's load balancer.
+
+**A temporary password opens one door.** A rider's issued password lets them sign in and change
+it, and nothing else — the block lives in a before-request hook on the API, not in the browser,
+so it holds against curl just as well as against our own screens.
+
+**We only deliver in Nairobi County.** The address search is bounded to it, and the API refuses
+coordinates outside it. Restricting only the search would be decoration; anyone can post
+coordinates straight to the endpoint.
 
 **Public tracking reveals nothing personal.** Tracking a parcel by code returns the stage and
 timestamps only — no address, no name, no phone number, no price. There is a test asserting
@@ -107,7 +125,7 @@ pipenv run test
 pipenv run start
 ```
 
-`test` must say **172 passed**. The API runs on http://localhost:5555. Leave this terminal open.
+`test` must say **201 passed**. The API runs on http://localhost:5555. Leave this terminal open.
 
 ### Frontend — terminal 2
 
@@ -135,13 +153,13 @@ amina@deliveroo.co.ke     customer1234
 ```
 server/
   app/
-    models/        8 SQLAlchemy models
+    models/        9 SQLAlchemy models
     resources/     Flask blueprints, one per area
     schemas/       Marshmallow validation
     services/      pricing, maps, mpesa, mailer, notifications, receipts
     utils/         decorators, errors, logging, pagination
   migrations/      Alembic
-  tests/           172 tests
+  tests/           201 tests
 client/
   src/
     api/           axios clients
