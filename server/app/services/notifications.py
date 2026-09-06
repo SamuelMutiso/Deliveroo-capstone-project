@@ -362,8 +362,10 @@ def _client_base():
     return origins[0].rstrip("/")
 
 
-def payment_receipt(order):
-    """Email the receipt the moment the money clears. Delivery detail is added if we have it."""
+def final_receipt(order):
+    """Email the receipt once the parcel has arrived and the money has cleared, in either order."""
+    if order.status != "delivered":
+        return False
     if order.payment is None or order.payment.status != "paid":
         return False
     if order.receipt_sent_at is not None:
@@ -395,23 +397,18 @@ def payment_receipt(order):
         proof = f"M-Pesa receipt {order.payment.mpesa_receipt or '—'}."
 
     paragraphs = [
-        f"We have received {_money(order.price_kes)} for parcel "
-        f"<strong>{order.tracking_code}</strong>.",
+        f"Parcel <strong>{order.tracking_code}</strong> is complete. "
+        f"Total paid {_money(order.price_kes)}.",
         f"<strong>From</strong> {order.pickup_address}<br>"
         f"<strong>To</strong> {order.destination_address}",
         f"<strong>Sent by</strong> {order.customer.name if order.customer else 'a customer'}"
         + (f" · {order.customer.phone}" if order.customer and order.customer.phone else ""),
     ]
 
-    if order.delivered_at:
-        paragraphs.append(
-            f"<strong>Delivered</strong> {order.delivered_at:%d %B %Y at %H:%M} to "
-            f"{order.received_by or order.recipient_name}"
-        )
-    else:
-        paragraphs.append(
-            "We will email you again at every stage until the parcel arrives."
-        )
+    paragraphs.append(
+        f"<strong>Delivered</strong> {order.delivered_at:%d %B %Y at %H:%M} to "
+        f"{order.received_by or order.recipient_name}"
+    )
 
     paragraphs.extend(
         [
@@ -422,15 +419,10 @@ def payment_receipt(order):
         ]
     )
 
-    delivered_line = (
-        f"Delivered to {order.received_by or order.recipient_name}.\n"
-        if order.delivered_at
-        else ""
-    )
     plain = (
-        f"We have received {_money(order.price_kes)} for parcel {order.tracking_code}.\n"
+        f"Receipt for parcel {order.tracking_code}. Total paid {_money(order.price_kes)}.\n"
         f"From {order.pickup_address} to {order.destination_address}.\n"
-        f"{delivered_line}"
+        f"Delivered to {order.received_by or order.recipient_name}.\n"
         f"{proof}\n"
         f"Document reference {reference}\n"
         f"Verify at {base}/verify"
@@ -441,7 +433,7 @@ def payment_receipt(order):
         "Deliveroo Logistics Kenya Ltd, Nairobi"
     )
 
-    html = mailer.wrap_html("Payment received", paragraphs, order.tracking_code, footer=footer)
+    html = mailer.wrap_html("Your receipt", paragraphs, order.tracking_code, footer=footer)
 
     recipients = []
     if order.customer is not None and order.customer.notification_email:
@@ -480,8 +472,8 @@ def notify(order, event):
 
     _record_inapp(order, event, copy)
 
-    if event == PAYMENT_RECEIVED:
-        payment_receipt(order)
+    if event in (DELIVERED, PAYMENT_RECEIVED):
+        final_receipt(order)
 
 
 def notify_status(order):
