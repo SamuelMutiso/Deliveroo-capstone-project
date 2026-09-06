@@ -213,9 +213,10 @@ def change_password():
         raise ApiError("The new password must be different from the current one", 422)
 
     user.password = data["new_password"]
+    user.must_change_password = False
     db.session.commit()
 
-    return {"message": "Password updated"}
+    return {"message": "Password updated", "user": user_schema.dump(user)}
 
 
 def _reset_link(raw_token):
