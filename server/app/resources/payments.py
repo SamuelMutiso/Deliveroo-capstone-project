@@ -11,7 +11,7 @@ from ..constants import (
     PAYMENT_PROCESSING,
     STATUS_CANCELLED,
 )
-from ..extensions import db
+from ..extensions import db, limiter
 from ..utils.clock import utcnow
 from ..models import Order, Payment
 from ..schemas import checkout_schema, payment_schema
@@ -22,6 +22,8 @@ from ..utils.errors import ApiError
 SIMULATED_SETTLE_SECONDS = 6
 
 payments_bp = Blueprint("payments", __name__, url_prefix="/api/payments")
+
+CHECKOUT_LIMIT = "6 per minute; 30 per hour"
 
 
 @payments_bp.get("/<int:order_id>")
@@ -35,6 +37,7 @@ def get_payment(order_id):
 
 
 @payments_bp.post("/<int:order_id>/mpesa")
+@limiter.limit(CHECKOUT_LIMIT)
 @customer_required
 def start_checkout(order_id):
     """Trigger an M-Pesa STK push for the order total."""

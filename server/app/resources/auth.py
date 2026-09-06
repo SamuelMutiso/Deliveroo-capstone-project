@@ -9,7 +9,7 @@ from flask_jwt_extended import (
 )
 
 from ..constants import ROLE_ADMIN, ROLE_CUSTOMER
-from ..extensions import db
+from ..extensions import db, limiter
 from ..models import PasswordResetToken, User
 from ..models.password_reset import TOKEN_TTL_MINUTES
 from ..schemas import (
@@ -30,6 +30,10 @@ from ..utils.errors import ApiError, ConflictError
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
 
+SIGN_IN_LIMIT = "10 per minute; 50 per hour"
+SIGN_UP_LIMIT = "5 per minute; 20 per hour"
+CODE_LIMIT = "5 per minute; 15 per hour"
+
 
 def issue_tokens(user):
     claims = {"role": user.role, "name": user.name}
@@ -41,6 +45,7 @@ def issue_tokens(user):
 
 
 @auth_bp.post("/register")
+@limiter.limit(SIGN_UP_LIMIT)
 def register():
     """Create an account and email the code that unlocks it."""
     data = register_schema.load(request.get_json() or {})
@@ -73,6 +78,7 @@ def register():
 
 
 @auth_bp.post("/verify-email")
+@limiter.limit(CODE_LIMIT)
 def verify_email():
     """Trade a valid code for a token pair."""
     data = verify_email_schema.load(request.get_json() or {})
@@ -88,6 +94,7 @@ def verify_email():
 
 
 @auth_bp.post("/resend-code")
+@limiter.limit(CODE_LIMIT)
 def resend_code():
     """Send another code. Says the same thing whether or not the account exists."""
     data = resend_code_schema.load(request.get_json() or {})
@@ -109,6 +116,7 @@ def resend_code():
 
 
 @auth_bp.post("/login")
+@limiter.limit(SIGN_IN_LIMIT)
 def login():
     """Exchange email and password for a token pair."""
     data = login_schema.load(request.get_json() or {})
@@ -129,6 +137,7 @@ def login():
 
 
 @auth_bp.post("/google")
+@limiter.limit(SIGN_IN_LIMIT)
 def google_sign_in():
     """Sign in, or create a customer account, from a verified Google identity."""
     credential = (request.get_json() or {}).get("credential", "").strip()
@@ -216,6 +225,7 @@ def _reset_link(raw_token):
 
 
 @auth_bp.post("/forgot-password")
+@limiter.limit(CODE_LIMIT)
 def forgot_password():
     """Start a password reset. The response never reveals whether the email exists."""
     data = forgot_password_schema.load(request.get_json() or {})
@@ -236,6 +246,7 @@ def forgot_password():
 
 
 @auth_bp.post("/reset-password")
+@limiter.limit(CODE_LIMIT)
 def reset_password():
     """Finish a password reset using the single-use token from the email."""
     data = reset_password_schema.load(request.get_json() or {})
