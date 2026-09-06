@@ -11,6 +11,7 @@ class UserSchema(Schema):
     phone = fields.Str(allow_none=True, validate=validate.Length(max=24))
     role = fields.Str(dump_only=True)
     is_active = fields.Bool(dump_only=True)
+    must_change_password = fields.Bool(dump_only=True)
     vehicle = fields.Str(allow_none=True)
     photo_url = fields.Str(allow_none=True)
     contact_email = fields.Email(allow_none=True, dump_only=True)
