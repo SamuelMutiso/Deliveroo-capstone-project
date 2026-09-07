@@ -1,4 +1,5 @@
 import time
+from datetime import timedelta
 from threading import Thread
 
 from flask import Blueprint, current_app, request
@@ -25,6 +26,10 @@ payments_bp = Blueprint("payments", __name__, url_prefix="/api/payments")
 
 CHECKOUT_LIMIT = "6 per minute; 30 per hour"
 
+# How long an unanswered prompt is treated as still live. A second tap inside this
+# window returns the first prompt rather than sending the customer another one.
+PROMPT_HOLD = timedelta(seconds=90)
+
 
 @payments_bp.get("/<int:order_id>")
 @jwt_required()
@@ -48,6 +53,15 @@ def start_checkout(order_id):
         raise ApiError("A cancelled order cannot be paid for", 409)
     if order.payment and order.payment.status == PAYMENT_PAID:
         raise ApiError("This order has already been paid for", 409)
+
+    live = _prompt_already_sent(order.payment)
+    if live is not None:
+        return {
+            "payment": payment_schema.dump(live),
+            "message": "A payment prompt is already on its way. Check your phone.",
+            "simulated": False,
+            "reused": True,
+        }, 202
 
     data = checkout_schema.load(request.get_json() or {})
     phone = mpesa.normalise_phone(data["phone"])
@@ -80,6 +94,18 @@ def start_checkout(order_id):
         "message": result.get("customer_message") or "Check your phone to authorise the payment",
         "simulated": bool(result.get("simulated")),
     }, 202
+
+
+def _prompt_already_sent(payment):
+    """A double tap should not put two M-Pesa prompts on one phone."""
+    if payment is None or payment.status != PAYMENT_PROCESSING:
+        return None
+
+    started = payment.updated_at or payment.created_at
+    if started is None or utcnow() - started > PROMPT_HOLD:
+        return None
+
+    return payment
 
 
 def _settle_simulated_payment(payment_id, delay):
@@ -119,6 +145,12 @@ def mpesa_callback():
     ).first()
     if payment is None:
         return {"ResultCode": 0, "ResultDesc": "Unknown checkout"}
+
+    if payment.status == PAYMENT_PAID:
+        # Safaricom retries until we answer. Record the retry, settle nothing twice.
+        payment.raw_callback = payload
+        db.session.commit()
+        return {"ResultCode": 0, "ResultDesc": "Already recorded"}
 
     payment.raw_callback = payload
     payment.result_description = parsed["result_description"]
