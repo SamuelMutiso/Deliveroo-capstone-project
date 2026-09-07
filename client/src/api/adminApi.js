@@ -27,4 +27,5 @@ export const adminApi = {
   rejectPayment: (orderId) =>
     axiosClient.patch(`/admin/payments/${orderId}/reject`).then((r) => r.data),
   stats: () => axiosClient.get('/admin/stats').then((r) => r.data),
+  audit: (params) => axiosClient.get('/admin/audit', { params }).then((r) => r.data),
 }

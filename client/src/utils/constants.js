@@ -135,6 +135,7 @@ export const NAV_BY_ROLE = {
     { to: "/admin/orders", label: "Orders" },
     { to: "/admin/users", label: "People" },
     { to: "/admin/applications", label: "Applications" },
+    { to: "/admin/audit", label: "Audit" },
     { to: "/profile", label: "Profile" },
   ],
 };
