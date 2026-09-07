@@ -1,5 +1,7 @@
 from marshmallow import Schema, fields
 
+from ..utils.timestamps import UTCDateTime
+
 
 class AuditEventSchema(Schema):
     id = fields.Int(dump_only=True)
@@ -9,7 +11,7 @@ class AuditEventSchema(Schema):
     subject_type = fields.Str(dump_only=True)
     subject_id = fields.Str(dump_only=True)
     summary = fields.Str(dump_only=True)
-    created_at = fields.DateTime(dump_only=True)
+    created_at = UTCDateTime(dump_only=True)
 
 
 audit_event_schema = AuditEventSchema()

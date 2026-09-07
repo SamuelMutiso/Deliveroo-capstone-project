@@ -14,6 +14,7 @@ from ..models import Order, User
 from ..schemas import quote_schema
 from ..services import maps, pricing
 from ..utils.clock import utcnow
+from ..utils.timestamps import to_iso
 from ..utils.errors import ApiError, NotFoundError
 
 public_bp = Blueprint("public", __name__, url_prefix="/api/public")
@@ -118,11 +119,11 @@ def track_parcel(code):
             "status": order.status,
             "distance_km": order.distance_km,
             "duration_min": order.duration_min,
-            "created_at": order.created_at.isoformat() if order.created_at else None,
-            "picked_up_at": order.picked_up_at.isoformat() if order.picked_up_at else None,
-            "delivered_at": order.delivered_at.isoformat() if order.delivered_at else None,
+            "created_at": to_iso(order.created_at),
+            "picked_up_at": to_iso(order.picked_up_at),
+            "delivered_at": to_iso(order.delivered_at),
             "is_closed": order.status in (STATUS_DELIVERED, STATUS_CANCELLED),
-            "expires_at": (closed_at + timedelta(days=TRACKING_WINDOW_DAYS)).isoformat()
+            "expires_at": to_iso(closed_at + timedelta(days=TRACKING_WINDOW_DAYS))
             if closed_at
             else None,
         }

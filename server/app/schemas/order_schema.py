@@ -3,6 +3,7 @@ from marshmallow import Schema, fields, validate, validates_schema
 from ..constants import ORDER_STATUSES, WEIGHT_CATEGORIES
 from ..utils import geofence
 from ..utils.phone import PhoneField
+from ..utils.timestamps import UTCDateTime
 from .tracking_schema import TrackingEventSchema
 from .user_schema import UserSummarySchema
 
@@ -46,18 +47,18 @@ class OrderSchema(Schema):
     received_by = fields.Str(dump_only=True, allow_none=True)
     rating = fields.Int(dump_only=True, allow_none=True)
     rating_comment = fields.Str(dump_only=True, allow_none=True)
-    rated_at = fields.DateTime(dump_only=True, allow_none=True)
+    rated_at = UTCDateTime(dump_only=True, allow_none=True)
 
     customer = fields.Nested(UserSummarySchema, dump_only=True)
     courier = fields.Nested(UserSummarySchema, dump_only=True, allow_none=True)
     payment_status = fields.Method("resolve_payment_status", dump_only=True)
     payment_method = fields.Method("resolve_payment_method", dump_only=True)
 
-    created_at = fields.DateTime(dump_only=True)
-    updated_at = fields.DateTime(dump_only=True)
-    picked_up_at = fields.DateTime(dump_only=True)
-    delivered_at = fields.DateTime(dump_only=True)
-    cancelled_at = fields.DateTime(dump_only=True)
+    created_at = UTCDateTime(dump_only=True)
+    updated_at = UTCDateTime(dump_only=True)
+    picked_up_at = UTCDateTime(dump_only=True)
+    delivered_at = UTCDateTime(dump_only=True)
+    cancelled_at = UTCDateTime(dump_only=True)
 
     def resolve_payment_status(self, order):
         return order.payment.status if order.payment else "unpaid"

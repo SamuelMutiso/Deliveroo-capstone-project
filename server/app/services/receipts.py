@@ -11,6 +11,8 @@ def _secret():
 
 
 def _payload(order):
+    # Deliberately the raw stored stamp, not the zoned one the API sends. Changing
+    # this string would invalidate the signature on every receipt already issued.
     stamp = order.delivered_at.isoformat() if order.delivered_at else ""
     return f"{order.id}:{order.tracking_code}:{stamp}".encode("utf-8")
 

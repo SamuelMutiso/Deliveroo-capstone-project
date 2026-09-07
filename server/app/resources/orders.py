@@ -27,6 +27,7 @@ from ..utils.clock import utcnow
 from ..utils.decorators import current_user, customer_required, owned_order_or_404
 from ..utils.errors import ApiError
 from ..utils.pagination import paginate
+from ..utils.timestamps import to_iso
 
 def declared_weight(data):
     """The customer picks a band, not a number. Record the band ceiling as the weight."""
@@ -280,7 +281,7 @@ def verify_receipt(reference):
         "valid": True,
         "receipt": {
             "tracking_code": order.tracking_code,
-            "delivered_at": order.delivered_at.isoformat() if order.delivered_at else None,
+            "delivered_at": to_iso(order.delivered_at),
             "received_by": order.received_by or order.recipient_name,
             "courier": order.courier.name if order.courier else None,
             "amount_kes": order.price_kes,

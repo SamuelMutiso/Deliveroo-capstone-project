@@ -1,6 +1,7 @@
 from marshmallow import Schema, fields, validate
 
 from ..utils.phone import PhoneField
+from ..utils.timestamps import UTCDateTime
 
 
 class PaymentSchema(Schema):
@@ -12,8 +13,8 @@ class PaymentSchema(Schema):
     phone = fields.Str(dump_only=True)
     mpesa_receipt = fields.Str(dump_only=True, allow_none=True)
     result_description = fields.Str(dump_only=True, allow_none=True)
-    created_at = fields.DateTime(dump_only=True)
-    paid_at = fields.DateTime(dump_only=True, allow_none=True)
+    created_at = UTCDateTime(dump_only=True)
+    paid_at = UTCDateTime(dump_only=True, allow_none=True)
 
 
 class CheckoutSchema(Schema):

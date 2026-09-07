@@ -2,6 +2,7 @@ from marshmallow import Schema, ValidationError, fields, validate, validates, va
 
 from ..constants import VEHICLE_OWNERSHIP, VEHICLE_TYPE_VALUES
 from ..utils.phone import PhoneField
+from ..utils.timestamps import UTCDateTime
 from .user_schema import UserSummarySchema
 
 PHOTO_MAX = 400_000
@@ -27,8 +28,8 @@ class CourierApplicationSchema(Schema):
     review_note = fields.Str(dump_only=True)
     company_email = fields.Str(dump_only=True)
     temporary_password = fields.Str(dump_only=True)
-    created_at = fields.DateTime(dump_only=True)
-    reviewed_at = fields.DateTime(dump_only=True)
+    created_at = UTCDateTime(dump_only=True)
+    reviewed_at = UTCDateTime(dump_only=True)
 
     applicant = fields.Nested(UserSummarySchema, dump_only=True)
     courier = fields.Nested(UserSummarySchema, dump_only=True, allow_none=True)
