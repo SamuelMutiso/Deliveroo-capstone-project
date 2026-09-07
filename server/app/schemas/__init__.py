@@ -1,3 +1,4 @@
+from .audit_schema import audit_event_schema
 from .order_schema import (
     assign_courier_schema,
     destination_update_schema,
