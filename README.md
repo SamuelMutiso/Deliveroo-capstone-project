@@ -34,10 +34,10 @@ Anyone at all can price a route and track a parcel from the home page without an
 | --- | --- | --- |
 | Client | React 18, Redux Toolkit, React Router, Vite, Tailwind CSS, Leaflet, Recharts | Vercel |
 | API | Flask, SQLAlchemy, Alembic, Marshmallow, Flask-JWT-Extended, gunicorn | Render |
-| Database | PostgreSQL — 9 models, 11 migrations | Render |
+| Database | PostgreSQL — 10 models, 12 migrations | Render |
 | Integrations | M-Pesa Daraja, Gmail API, OpenStreetMap (Nominatim + OSRM), Google Sign-In | — |
 
-67 REST endpoints, 201 automated tests.
+68 REST endpoints, 218 automated tests.
 
 ---
 
@@ -74,6 +74,17 @@ verify an undelivered receipt, so a receipt never exists that fails its own chec
 **Receipts are signed.** Every delivery receipt carries a keyed digest over the order id,
 tracking code and delivery time. Anyone can check one at `/verify` without an account, and a
 forged receipt fails the check.
+
+**Nothing charges twice.** A double-tapped checkout returns the prompt already on its way
+instead of sending a second one, and a retried Daraja callback — Safaricom retries until we
+answer — is recorded and ignored rather than settled again. A retry cannot overwrite the receipt
+number of the payment that actually happened.
+
+**Every use of authority is written down.** Confirming cash, approving or turning down a rider,
+forcing an order's status, reassigning a rider, changing an account — each records who did it,
+to what, and when, readable at `/admin/audit` and editable by nobody. Writing the log can never
+undo the action it describes: an audit failure is swallowed, because losing the record is better
+than rolling back a real cash confirmation.
 
 **Rate limiting is shared, not per process.** Counting requests in a Python dictionary is
 worthless behind more than one worker — each one keeps its own tally, so the real limit is
@@ -127,7 +138,7 @@ pipenv run test
 pipenv run start
 ```
 
-`test` must say **201 passed**. The API runs on http://localhost:5555. Leave this terminal open.
+`test` must say **218 passed**. The API runs on http://localhost:5555. Leave this terminal open.
 
 ### Frontend — terminal 2
 
@@ -155,13 +166,13 @@ amina@deliveroo.co.ke     customer1234
 ```
 server/
   app/
-    models/        9 SQLAlchemy models
+    models/        10 SQLAlchemy models
     resources/     Flask blueprints, one per area
     schemas/       Marshmallow validation
     services/      pricing, maps, mpesa, mailer, notifications, receipts
     utils/         decorators, errors, logging, pagination
   migrations/      Alembic
-  tests/           201 tests
+  tests/           218 tests
 client/
   src/
     api/           axios clients
