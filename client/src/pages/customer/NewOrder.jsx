@@ -56,17 +56,24 @@ export default function NewOrder() {
     }
   }, [dispatch])
 
+  const pickupLat = values.pickup?.lat
+  const pickupLng = values.pickup?.lng
+  const destinationLat = values.destination?.lat
+  const destinationLng = values.destination?.lng
+  const weightCategory = values.weight_category
+
+  // Only the route and the weight band change the price. Depending on the whole
+  // form would re-price on every keystroke in the recipient fields.
   const quotePayload = useMemo(() => {
-    const { pickup, destination, weight_category: category } = values
-    if (!pickup?.lat || !destination?.lat || !category) return null
+    if (!pickupLat || !destinationLat || !weightCategory) return null
     return {
-      pickup_lat: pickup.lat,
-      pickup_lng: pickup.lng,
-      destination_lat: destination.lat,
-      destination_lng: destination.lng,
-      weight_category: category,
+      pickup_lat: pickupLat,
+      pickup_lng: pickupLng,
+      destination_lat: destinationLat,
+      destination_lng: destinationLng,
+      weight_category: weightCategory,
     }
-  }, [values])
+  }, [pickupLat, pickupLng, destinationLat, destinationLng, weightCategory])
 
   const routeReady = Boolean(quotePayload)
 
