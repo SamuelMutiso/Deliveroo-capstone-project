@@ -1,5 +1,7 @@
 from marshmallow import Schema, fields
 
+from ..utils.timestamps import UTCDateTime
+
 
 class TrackingEventSchema(Schema):
     id = fields.Int(dump_only=True)
@@ -7,7 +9,7 @@ class TrackingEventSchema(Schema):
     note = fields.Str(dump_only=True, allow_none=True)
     lat = fields.Float(dump_only=True, allow_none=True)
     lng = fields.Float(dump_only=True, allow_none=True)
-    created_at = fields.DateTime(dump_only=True)
+    created_at = UTCDateTime(dump_only=True)
     actor = fields.Method("resolve_actor", dump_only=True)
 
     def resolve_actor(self, event):

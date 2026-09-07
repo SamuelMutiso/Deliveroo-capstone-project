@@ -2,6 +2,7 @@ from marshmallow import Schema, ValidationError, fields, validate, validates
 
 from ..constants import ROLE_CUSTOMER, USER_ROLES
 from ..utils.phone import PhoneField
+from ..utils.timestamps import UTCDateTime
 
 
 class UserSchema(Schema):
@@ -18,8 +19,8 @@ class UserSchema(Schema):
     is_available = fields.Bool(dump_only=True)
     current_lat = fields.Float(allow_none=True)
     current_lng = fields.Float(allow_none=True)
-    last_seen_at = fields.DateTime(dump_only=True)
-    created_at = fields.DateTime(dump_only=True)
+    last_seen_at = UTCDateTime(dump_only=True)
+    created_at = UTCDateTime(dump_only=True)
 
 
 class UserSummarySchema(Schema):
