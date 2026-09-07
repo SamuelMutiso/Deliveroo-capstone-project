@@ -24,9 +24,10 @@ from ..constants import (
 )
 from ..extensions import db
 from ..utils.clock import utcnow
-from ..models import CourierApplication, Order, Payment, TrackingEvent, User
+from ..models import AuditEvent, CourierApplication, Order, Payment, TrackingEvent, User
 from ..schemas import (
     admin_user_update_schema,
+    audit_event_schema,
     application_decision_schema,
     assign_courier_schema,
     courier_application_schema,
@@ -38,7 +39,7 @@ from ..schemas import (
     user_schema,
     user_summary_schema,
 )
-from ..services import mailer, notifications, onboarding, sms
+from ..services import audit, mailer, notifications, onboarding, sms
 from ..utils.decorators import admin_required, current_user
 from ..utils.errors import ApiError, ConflictError, NotFoundError
 from ..utils.pagination import paginate
@@ -119,6 +120,13 @@ def set_status(order_id):
     )
     db.session.commit()
 
+    audit.record(
+        admin,
+        audit.ORDER_STATUS_FORCED,
+        "order",
+        order.tracking_code,
+        f"Status set to {data['status']}",
+    )
     notifications.notify_status(order)
     return {"order": order_detail_schema.dump(order)}
 
@@ -167,6 +175,9 @@ def assign_courier(order_id):
     TrackingEvent.record(order, order.status, f"Assigned to {courier.name}", actor=admin)
     db.session.commit()
 
+    audit.record(
+        admin, audit.ORDER_ASSIGNED, "order", order.tracking_code, f"Assigned to {courier.name}"
+    )
     notifications.notify(order, notifications.COURIER_ASSIGNED)
     return {"order": order_detail_schema.dump(order)}
 
@@ -250,6 +261,8 @@ def update_user(user_id):
         setattr(user, field, value)
     db.session.commit()
 
+    changes = ", ".join(f"{field} to {value}" for field, value in data.items())
+    audit.record(admin, audit.USER_UPDATED, "user", user.id, f"{user.name}: {changes}")
     return {"user": user_schema.dump(user)}
 
 
@@ -389,6 +402,13 @@ def approve_application(application_id):
 
     _email_decision(application, rider=rider, password=password)
 
+    audit.record(
+        admin,
+        audit.RIDER_APPROVED,
+        "courier_application",
+        application.id,
+        f"{application.full_name} approved as {rider.email}",
+    )
     return {
         "application": courier_application_schema.dump(application),
         "credentials": {"email": rider.email, "password": password},
@@ -412,7 +432,27 @@ def reject_application(application_id):
 
     _email_decision(application)
 
+    audit.record(
+        admin,
+        audit.RIDER_REJECTED,
+        "courier_application",
+        application.id,
+        f"{application.full_name} turned down: {data.get('note') or 'no reason given'}",
+    )
     return {"application": courier_application_schema.dump(application)}
+
+
+@admin_bp.get("/audit")
+@admin_required
+def audit_trail():
+    """Every privileged action, newest first. Read only — nothing edits this."""
+    query = AuditEvent.query.order_by(AuditEvent.created_at.desc(), AuditEvent.id.desc())
+
+    action = (request.args.get("action") or "").strip()
+    if action:
+        query = query.filter(AuditEvent.action == action)
+
+    return paginate(query, audit_event_schema)
 
 
 def _application_or_404(application_id):
@@ -536,6 +576,13 @@ def confirm_payment(order_id):
     payment.result_description = f"Cash payment confirmed by {admin.name}"
     db.session.commit()
 
+    audit.record(
+        admin,
+        audit.PAYMENT_CONFIRMED,
+        "order",
+        order.tracking_code,
+        f"Cash payment of KES {payment.amount_kes:,.0f} confirmed",
+    )
     notifications.notify(order, notifications.PAYMENT_RECEIVED)
     return {"payment": payment_schema.dump(payment)}
 
@@ -544,6 +591,7 @@ def confirm_payment(order_id):
 @admin_required
 def reject_payment(order_id):
     """Turn down a cash payment the rider reported but could not account for."""
+    admin = current_user()
     order = order_or_404(order_id)
     payment = order.payment
 
@@ -554,4 +602,11 @@ def reject_payment(order_id):
     payment.result_description = "Cash payment was not confirmed"
     db.session.commit()
 
+    audit.record(
+        admin,
+        audit.PAYMENT_REJECTED,
+        "order",
+        order.tracking_code,
+        "Reported cash payment was turned down",
+    )
     return {"payment": payment_schema.dump(payment)}
