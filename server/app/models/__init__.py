@@ -1,3 +1,4 @@
+from .audit_event import AuditEvent
 from .courier_application import CourierApplication
 from .email_verification import EmailVerification
 from .notification import Notification
@@ -8,6 +9,7 @@ from .tracking_event import TrackingEvent
 from .user import User
 
 __all__ = [
+    "AuditEvent",
     "CourierApplication",
     "EmailVerification",
     "Notification",
