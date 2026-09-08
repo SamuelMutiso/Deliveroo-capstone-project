@@ -28,6 +28,64 @@ Anyone at all can price a route and track a parcel from the home page without an
 
 ---
 
+## Features
+
+### Anyone, without an account
+
+- **Price a route before signing up.** Pick two points on the home page and get the real fare,
+  computed from road distance and a weight band — not a guess.
+- **Track a parcel by code.** `/track/DLV-XXXXXX` shows the stage and timestamps only. No name,
+  no address, no phone number, no price, and a code stops resolving a week after the parcel is
+  closed.
+- **Verify a receipt.** Paste a receipt reference at `/verify` and the app confirms whether it
+  is genuine.
+
+### Customers
+
+- **Book a parcel** with address autocomplete bounded to Nairobi, a "use my location" pin for an
+  exact pickup, five weight bands, and a live quote that updates as the route changes.
+- **Sign in with email or Google.** New email accounts confirm a six digit code first.
+- **Follow the delivery** on a map through pending, picked up, in transit and delivered, with a
+  full tracking history of who changed what and when.
+- **Pay with M-Pesa** by STK push, with the order updating itself the moment the PIN is entered
+  — no refreshing.
+- **Get a signed receipt** once the parcel is both paid for and delivered, viewable in the app,
+  printable to PDF, and emailed automatically.
+- **Change the destination** while the order is still pending, and cancel before pickup.
+- **Rate the delivery** afterwards.
+- **Apply to become a rider** from inside the app.
+
+### Riders
+
+- **See only their own deliveries** — the API refuses another rider's order, not just the UI.
+- **Advance each stage from the road** and share live position while carrying a parcel.
+- **Record who received the parcel**, as proof of delivery.
+- **Report a cash payment** when an M-Pesa prompt does not arrive. The rider reports it; an
+  administrator confirms it separately.
+- **Track their own earnings** per delivery.
+- **Must replace the temporary password** issued on approval before anything else opens.
+
+### Operations
+
+- **Assign riders** to orders and correct any status.
+- **Confirm or turn down cash payments** reported by riders.
+- **Review rider applications** with licence and vehicle photos, approving one to issue a company
+  login automatically, or turning it down with a reason the applicant reads.
+- **Manage accounts** — change a role, deactivate an account.
+- **Watch the network** — daily volume, courier performance and revenue on a dashboard.
+- **Read the audit trail** of every privileged action, filterable and editable by nobody.
+
+### Throughout
+
+- **Email at every stage**, to the sender, the recipient and the rider — and SMS too, wherever
+  an SMS provider is configured.
+- **An in-app notification bell** for anything needing attention.
+- **Rate limiting** on tracking, sign in, sign up, code resends and checkout, counted in Redis so
+  the limit holds across every worker.
+- **Password reset** by single-use emailed link.
+
+---
+
 ## Stack
 
 | Layer | Built with | Hosted on |
@@ -37,11 +95,11 @@ Anyone at all can price a route and track a parcel from the home page without an
 | Database | PostgreSQL — 10 models, 12 migrations | Render |
 | Integrations | M-Pesa Daraja, Gmail API, OpenStreetMap (Nominatim + OSRM), Google Sign-In | — |
 
-68 REST endpoints, 218 automated tests.
+65 REST endpoints, 225 automated tests.
 
 ---
 
-## MAPS USED
+## Decisions worth explaining
 
 **OpenStreetMap instead of Google Maps.** A Google Maps key has to ship to the browser, where
 anyone can lift it and spend it, and it needs a billing account behind it. OpenStreetMap gives
@@ -138,7 +196,7 @@ pipenv run test
 pipenv run start
 ```
 
-`test` must say **218 passed**. The API runs on http://localhost:5555. Leave this terminal open.
+`test` must say **225 passed**. The API runs on http://localhost:5555. Leave this terminal open.
 
 ### Frontend — terminal 2
 
@@ -172,7 +230,7 @@ server/
     services/      pricing, maps, mpesa, mailer, notifications, receipts
     utils/         decorators, errors, logging, pagination
   migrations/      Alembic
-  tests/           218 tests
+  tests/           225 tests
 client/
   src/
     api/           axios clients
