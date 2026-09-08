@@ -1,3 +1,5 @@
+import threading
+
 import pytest
 
 from app import create_app
@@ -5,6 +7,17 @@ from app.constants import ROLE_ADMIN, ROLE_COURIER, ROLE_CUSTOMER
 from app.extensions import db as _db
 from app.extensions import limiter
 from app.models import User
+from app.resources import payments as payments_resource
+
+
+def wait_for_background_work(timeout=5.0):
+    """A simulated M-Pesa settlement runs on a thread and writes after the test ends.
+
+    Dropping the tables while it is mid-write locks the database, so let it finish first.
+    """
+    for thread in threading.enumerate():
+        if thread is not threading.current_thread():
+            thread.join(timeout=timeout)
 
 
 @pytest.fixture
@@ -13,8 +26,43 @@ def app():
     with application.app_context():
         _db.create_all()
         yield application
+        wait_for_background_work()
         _db.session.remove()
         _db.drop_all()
+
+
+class InlineThread:
+    """Runs the work immediately instead of alongside.
+
+    A simulated settlement writes to the database from a thread. Against SQLite, which
+    allows a single writer, that races the test's own transaction and its teardown. The
+    threading is a production concern; what a test needs to check is that the settlement
+    happens and settles the payment correctly.
+    """
+
+    daemon = True
+
+    def __init__(self, target=None, args=(), kwargs=None, **_ignored):
+        self._target = target
+        self._args = args
+        self._kwargs = kwargs or {}
+
+    def start(self):
+        if self._target is not None:
+            self._target(*self._args, **self._kwargs)
+
+    def join(self, timeout=None):
+        return None
+
+    def is_alive(self):
+        return False
+
+
+@pytest.fixture(autouse=True)
+def settle_without_racing(monkeypatch):
+    """No waiting, and no second writer fighting the test for the database."""
+    monkeypatch.setattr(payments_resource, "SIMULATED_SETTLE_SECONDS", 0)
+    monkeypatch.setattr(payments_resource, "Thread", InlineThread)
 
 
 @pytest.fixture(autouse=True)
