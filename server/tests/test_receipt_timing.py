@@ -1,4 +1,3 @@
-import threading
 import time
 
 import pytest
@@ -32,13 +31,6 @@ def receipts_in(outbox):
     return [message for message in outbox if message["subject"].startswith("Receipt ·")]
 
 
-def quiesce(timeout=3.0):
-    """The simulated settlement runs on a thread. Let it finish before touching the db again."""
-    for thread in threading.enumerate():
-        if thread is not threading.current_thread():
-            thread.join(timeout=timeout)
-
-
 def settle(client, headers, order):
     client.post(
         f"/api/payments/{order['id']}/mpesa", headers=headers, json={"phone": "0712345678"}
@@ -48,10 +40,8 @@ def settle(client, headers, order):
             "payment"
         ]
         if payment["status"] == PAYMENT_PAID:
-            quiesce()
             return payment
         time.sleep(0.1)
-    quiesce()
     return payment
 
 
