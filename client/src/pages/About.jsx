@@ -95,7 +95,7 @@ export default function About() {
             </div>
           </div>
           <Figure
-            src={IMAGES.parcelStack}
+            src={IMAGES.teamPlanning}
             alt="Stacked parcels ready for dispatch"
             className="aspect-[4/5] w-full"
             tone="brand"

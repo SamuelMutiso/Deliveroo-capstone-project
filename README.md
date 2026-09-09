@@ -1,19 +1,204 @@
 # Deliveroo
 
-Full-stack parcel delivery management platform.
+Parcel delivery management for Nairobi. A customer books a parcel and sees the price before
+confirming, a rider carries it and writes each stage from the road, and an operations team
+assigns riders and watches the network. Everything a customer is told is generated from the
+same record the rider updated.
 
-## Getting the project on your machine
+**Live app** — https://deliveroo-capstone-project.vercel.app
+**API** — https://deliveroo-api-l7fs.onrender.com/api/health
 
-You are a collaborator on this repository, so clone it. Do not fork it.
+Moringa School · Module 6 capstone · Samuel Mutiso, Alexander, David, James, Michelle
+
+---
+
+## What it does
+
+**Customers** get a quote from the real road distance and a weight band before they commit,
+follow the parcel through every stage, pay with M-Pesa, and receive a signed receipt they can
+verify publicly.
+
+**Riders** see only the deliveries assigned to them, advance each stage, share live position
+while carrying a parcel, record who received it, and track their own earnings.
+
+**Operations** assign riders, correct mistakes, confirm cash payments, review rider
+applications, and watch daily volume and courier performance from a dashboard.
+
+Anyone at all can price a route and track a parcel from the home page without an account.
+
+---
+
+## Features
+
+### Anyone, without an account
+
+- **Price a route before signing up.** Pick two points on the home page and get the real fare,
+  computed from road distance and a weight band — not a guess.
+- **Track a parcel by code.** `/track/DLV-XXXXXX` shows the stage and timestamps only. No name,
+  no address, no phone number, no price, and a code stops resolving a week after the parcel is
+  closed.
+- **Verify a receipt.** Paste a receipt reference at `/verify` and the app confirms whether it
+  is genuine.
+
+### Customers
+
+- **Book a parcel** with address autocomplete bounded to Nairobi, a "use my location" pin for an
+  exact pickup, five weight bands, and a live quote that updates as the route changes.
+- **Sign in with email or Google.** New email accounts confirm a six digit code first.
+- **Follow the delivery** on a map through pending, picked up, in transit and delivered, with a
+  full tracking history of who changed what and when.
+- **Pay with M-Pesa** by STK push, with the order updating itself the moment the PIN is entered
+  — no refreshing.
+- **Get a signed receipt** once the parcel is both paid for and delivered, viewable in the app,
+  printable to PDF, and emailed automatically.
+- **Change the destination** while the order is still pending, and cancel before pickup.
+- **Rate the delivery** afterwards.
+- **Apply to become a rider** from inside the app.
+
+### Riders
+
+- **See only their own deliveries** — the API refuses another rider's order, not just the UI.
+- **Advance each stage from the road** and share live position while carrying a parcel.
+- **Record who received the parcel**, as proof of delivery.
+- **Report a cash payment** when an M-Pesa prompt does not arrive. The rider reports it; an
+  administrator confirms it separately.
+- **Track their own earnings** per delivery.
+- **Must replace the temporary password** issued on approval before anything else opens.
+
+### Operations
+
+- **Assign riders** to orders and correct any status.
+- **Confirm or turn down cash payments** reported by riders.
+- **Review rider applications** with licence and vehicle photos, approving one to issue a company
+  login automatically, or turning it down with a reason the applicant reads.
+- **Manage accounts** — change a role, deactivate an account.
+- **Watch the network** — daily volume, courier performance and revenue on a dashboard.
+- **Read the audit trail** of every privileged action, filterable and editable by nobody.
+
+### Throughout
+
+- **Email at every stage**, to the sender, the recipient and the rider — and SMS too, wherever
+  an SMS provider is configured.
+- **An in-app notification bell** for anything needing attention.
+- **Rate limiting** on tracking, sign in, sign up, code resends and checkout, counted in Redis so
+  the limit holds across every worker.
+- **Password reset** by single-use emailed link.
+
+---
+
+## Stack
+
+| Layer | Built with | Hosted on |
+| --- | --- | --- |
+| Client | React 18, Redux Toolkit, React Router, Vite, Tailwind CSS, Leaflet, Recharts | Vercel |
+| API | Flask, SQLAlchemy, Alembic, Marshmallow, Flask-JWT-Extended, gunicorn | Render |
+| Database | PostgreSQL — 10 models, 12 migrations | Render |
+| Integrations | M-Pesa Daraja, Gmail API, OpenStreetMap (Nominatim + OSRM), Google Sign-In | — |
+
+65 REST endpoints, 225 automated tests.
+
+---
+
+## Decisions worth explaining
+
+**OpenStreetMap instead of Google Maps.** A Google Maps key has to ship to the browser, where
+anyone can lift it and spend it, and it needs a billing account behind it. OpenStreetMap gives
+the same pickup and destination pins, live rider position, road route, distance and duration
+with no key at all. Geocoding and routing are proxied through our own API, so the browser never
+calls a third party directly and the results are cached and rate limited on our side.
+
+**Gmail API instead of SMTP.** Our host blocks outbound ports 25, 465 and 587, so no SMTP
+library can send mail from production. The Gmail API sends over HTTPS on 443, which is not
+blocked, and it uses our own mailbox rather than a third-party sending account that can be
+suspended.
+
+**Cash payments need two people.** An M-Pesa prompt does not always reach a real phone. When it
+fails a rider can take cash, but the rider only *reports* it — an administrator confirms it
+separately before the order is settled. Nobody can close their own payment.
+
+**A new account confirms its email before it can sign in.** Registration emails a six digit
+code and returns no tokens at all. The code is stored only as a SHA-256 digest, expires in
+fifteen minutes, dies after five wrong guesses, and is retired the moment another is issued.
+Resending says the same thing whether or not the address has an account, so the endpoint cannot
+be used to find out who has registered. Google sign-in skips the step, because Google has
+already proved the address.
+
+**A receipt needs both halves of the transaction.** It is issued only once the parcel is
+delivered *and* the payment has cleared, in whichever order those happen — the receipt link, the
+receipt page and the emailed copy all appear at that same moment. Paying up front gets an
+immediate "payment received" note instead. This keeps the document honest: `/verify` refuses to
+verify an undelivered receipt, so a receipt never exists that fails its own check.
+
+**Receipts are signed.** Every delivery receipt carries a keyed digest over the order id,
+tracking code and delivery time. Anyone can check one at `/verify` without an account, and a
+forged receipt fails the check.
+
+**Nothing charges twice.** A double-tapped checkout returns the prompt already on its way
+instead of sending a second one, and a retried Daraja callback — Safaricom retries until we
+answer — is recorded and ignored rather than settled again. A retry cannot overwrite the receipt
+number of the payment that actually happened.
+
+**Every use of authority is written down.** Confirming cash, approving or turning down a rider,
+forcing an order's status, reassigning a rider, changing an account — each records who did it,
+to what, and when, readable at `/admin/audit` and editable by nobody. Writing the log can never
+undo the action it describes: an audit failure is swallowed, because losing the record is better
+than rolling back a real cash confirmation.
+
+**Rate limiting is shared, not per process.** Counting requests in a Python dictionary is
+worthless behind more than one worker — each one keeps its own tally, so the real limit is
+however many processes are running, and a restart clears it. Flask-Limiter counts in Redis
+instead, so every worker and every instance reads the same number. The app also sits behind
+ProxyFix, otherwise every request would look like it came from our host's load balancer.
+
+**A temporary password opens one door.** A rider's issued password lets them sign in and change
+it, and nothing else — the block lives in a before-request hook on the API, not in the browser,
+so it holds against curl just as well as against our own screens.
+
+**We only deliver in Nairobi County.** The address search is bounded to it, and the API refuses
+coordinates outside it. Restricting only the search would be decoration; anyone can post
+coordinates straight to the endpoint.
+
+**Public tracking reveals nothing personal.** Tracking a parcel by code returns the stage and
+timestamps only — no address, no name, no phone number, no price. There is a test asserting
+each of those fields is absent, so the endpoint cannot be widened by accident.
+
+---
+
+## Running it locally
+
+You do not need PostgreSQL installed. The commands below build a local database for you.
+
+If `pipenv --version` fails, run `pip3 install --user pipenv` first, then open a new terminal.
+
+### Backend — terminal 1
 
 ```bash
-git clone https://github.com/SamuelMutiso/Deliveroo-capstone-project.git
-cd deliveroo
+cd server
+pipenv install --dev
+cp .env.example .env
 ```
 
-## Install
+Open `server/.env` and paste a long random string after each of these two. Change nothing else:
 
-Frontend:
+```
+SECRET_KEY=
+JWT_SECRET_KEY=
+```
+
+Generate them with `python3 -c "import secrets; print(secrets.token_hex(32))"`.
+Never leave a key blank — an empty value is not the same as an absent one, and the app will
+refuse to start.
+
+```bash
+pipenv run upgrade
+pipenv run seed
+pipenv run test
+pipenv run start
+```
+
+`test` must say **225 passed**. The API runs on http://localhost:5555. Leave this terminal open.
+
+### Frontend — terminal 2
 
 ```bash
 cd client
@@ -22,50 +207,75 @@ cp .env.example .env
 npm run dev
 ```
 
-Backend:
+Open http://localhost:5173.
 
-```bash
-cd server
-pipenv install --dev
-cp .env.example .env
+### Seeded logins
+
+```
+admin@deliveroo.co.ke     admin1234
+peter@deliveroo.co.ke     courier1234
+amina@deliveroo.co.ke     customer1234
 ```
 
-## Working on your branch
+---
 
-Start from `development` every time:
+## Project layout
 
-```bash
-git checkout development
-git pull origin development
+```
+server/
+  app/
+    models/        10 SQLAlchemy models
+    resources/     Flask blueprints, one per area
+    schemas/       Marshmallow validation
+    services/      pricing, maps, mpesa, mailer, notifications, receipts
+    utils/         decorators, errors, logging, pagination
+  migrations/      Alembic
+  tests/           225 tests
+client/
+  src/
+    api/           axios clients
+    components/    ui, layout, orders, map, landing, courier, auth
+    features/      Redux Toolkit slices
+    pages/         routed screens by role
 ```
 
-Switch to your own branch and bring it up to date:
+---
+
+## Testing
 
 ```bash
-git checkout <yourname>-frontend
-git merge development
+cd server && pipenv run test
 ```
 
-Commit and push:
+Covers role boundaries (a rider cannot open another rider's delivery), the payment state
+machine including the cash confirmation path, every pricing band, notification fan-out, receipt
+signing and verification, and the privacy limits of the public API.
 
-```bash
-git add .
-git commit -m "short description of what you did"
-git push -u origin <yourname>-frontend
-```
+The test config pins integration credentials to empty values, so the suite passes the same way
+on every machine regardless of what an individual developer has in their own `.env`.
 
-The `-u` is only needed the first time you push a branch. After that, `git push`.
+---
 
-When your work is ready, open a pull request from your branch into `development` on GitHub.
+## Environment
 
-## Branches
+Both apps ship a `.env.example`. Only two variables are required to run locally —
+`SECRET_KEY` and `JWT_SECRET_KEY`. Everything else is optional and falls back to a working
+default: without M-Pesa credentials payments run in simulation, without mail credentials email
+is logged instead of sent, and without a Google client id the sign-in button hides itself.
 
-| Branch | Purpose |
+`.env` is gitignored and must never be committed.
+
+---
+
+## Team
+
+| | |
 | --- | --- |
-| `main` | Deployment only. Never push to it. |
-| `development` | Integration branch. All pull requests go here. |
-| `testing` | Pull from here to test the combined work. |
-| `<name>-frontend` | Your frontend working branch. |
-| `<name>-backend` | Your backend working branch. |
+| Samuel Mutiso | Developer |
+| Alexander | Developer |
+| David | Developer |
+| James | Developer |
+| Michelle | Developer |
 
-Never commit a `.env` file.
+Branching: work happens on `development`, which deploys the API to Render. `main` deploys the
+client to Vercel. Commits are small and single-purpose.

@@ -16,7 +16,7 @@ export default defineConfig({
           react: ['react', 'react-dom', 'react-router-dom'],
           redux: ['@reduxjs/toolkit', 'react-redux'],
           charts: ['recharts'],
-          maps: ['@react-google-maps/api'],
+          maps: ['leaflet', 'react-leaflet'],
         },
       },
     },

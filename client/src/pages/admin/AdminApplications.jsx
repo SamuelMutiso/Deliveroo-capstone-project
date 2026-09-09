@@ -24,7 +24,6 @@ import {
   setApplicationFilter,
 } from '@/features/admin/adminSlice'
 import { fullDate } from '@/utils/formatters'
-import { useLivePoll } from '@/hooks/useLivePoll'
 import { useToast } from '@/hooks/useToast'
 
 const FILTERS = [
@@ -51,8 +50,6 @@ export default function AdminApplications() {
   useEffect(() => {
     dispatch(fetchApplications(filter))
   }, [dispatch, filter])
-
-  useLivePoll(() => dispatch(fetchApplications(filter)), { enabled: filter === 'pending' })
 
   const approve = async (application) => {
     const result = await dispatch(approveApplication({ id: application.id, note: null }))

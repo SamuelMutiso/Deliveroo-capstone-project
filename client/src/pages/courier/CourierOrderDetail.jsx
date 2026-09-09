@@ -13,6 +13,7 @@ import { PageContainer } from '@/components/layout/AppShell'
 import { PageSpinner } from '@/components/ui/Spinner'
 import {
   advanceStage,
+  declareCash,
   fetchAssignment,
   pushLocation,
   selectAssignment,
@@ -24,7 +25,6 @@ import {
 import { NEXT_STAGE, STATUS, STATUS_META } from '@/utils/constants'
 import { distance, duration, fullDate, money } from '@/utils/formatters'
 import { useLiveLocation } from '@/hooks/useLiveLocation'
-import { useLivePoll } from '@/hooks/useLivePoll'
 import { useToast } from '@/hooks/useToast'
 
 export default function CourierOrderDetail() {
@@ -40,15 +40,13 @@ export default function CourierOrderDetail() {
   const saveError = useSelector(selectCourierSaveError)
 
   const [manual, setManual] = useState({ lat: '', lng: '' })
+  const [receivedBy, setReceivedBy] = useState('')
   const [locating, setLocating] = useState(false)
 
   useEffect(() => {
     dispatch(fetchAssignment(id))
   }, [dispatch, id])
 
-  useLivePoll(() => dispatch(fetchAssignment(id)))
-
-  // Declared before the loading early-return: hooks must run in the same order every render.
   const live = useLiveLocation((point) => {
     dispatch(pushLocation({ id, lat: point.lat, lng: point.lng, note: 'Live position' }))
   })
@@ -82,11 +80,35 @@ export default function CourierOrderDetail() {
 
   const nextStage = NEXT_STAGE[order.status]
   const closed = order.status === STATUS.DELIVERED || order.status === STATUS.CANCELLED
+  const currentStageLabel = STATUS_META[order.status]?.label?.toLowerCase() ?? order.status
+  const nextStageLabel = nextStage ? STATUS_META[nextStage]?.label?.toLowerCase() : null
+  const canAdvance = Boolean(nextStage) && Boolean(STATUS_META[nextStage])
+  const paid = order.payment_status === 'paid'
+  const cashPending = order.payment_status === 'cash_pending'
+  const cancelled = order.status === STATUS.CANCELLED
+
+  const reportCash = async () => {
+    const result = await dispatch(declareCash(order.id))
+    if (declareCash.fulfilled.match(result)) {
+      toast.success('Reported to the admin team for confirmation')
+    }
+  }
+
+  const handingOver = nextStage === STATUS.DELIVERED
+  const proofMissing = handingOver && !receivedBy.trim()
 
   const advance = async () => {
-    const result = await dispatch(advanceStage({ id: order.id, status: nextStage }))
+    if (!canAdvance || proofMissing) return
+    const result = await dispatch(
+      advanceStage({
+        id: order.id,
+        status: nextStage,
+        receivedBy: handingOver ? receivedBy.trim() : undefined,
+      }),
+    )
     if (advanceStage.fulfilled.match(result)) {
-      toast.success(`Marked as ${STATUS_META[nextStage].label.toLowerCase()}`)
+      toast.success(`Marked as ${nextStageLabel}`)
+      setReceivedBy('')
     }
   }
 
@@ -211,14 +233,75 @@ export default function CourierOrderDetail() {
             ) : (
               <>
                 <p className="font-body text-sm text-slate-500">
-                  Current stage is {STATUS_META[order.status].label.toLowerCase()}.
+                  Current stage is {currentStageLabel}.
                 </p>
-                <Button fullWidth size="lg" className="mt-3.5" loading={saving} onClick={advance}>
-                  Mark as {STATUS_META[nextStage].label.toLowerCase()}
-                </Button>
+                {handingOver && (
+                  <Input
+                    label="Received by"
+                    className="mt-3.5"
+                    value={receivedBy}
+                    onChange={(event) => setReceivedBy(event.target.value)}
+                    placeholder="Name of whoever took the parcel"
+                    hint="Goes on the customer's receipt as proof of delivery"
+                  />
+                )}
+                {canAdvance ? (
+                  <Button
+                    fullWidth
+                    size="lg"
+                    className="mt-3.5"
+                    loading={saving}
+                    disabled={proofMissing}
+                    onClick={advance}
+                  >
+                    Mark as {nextStageLabel}
+                  </Button>
+                ) : (
+                  <p className="mt-3.5 rounded-xl bg-amber-100 px-3.5 py-2.5 font-body text-sm text-amber-700">
+                    This delivery is in an unrecognized stage ({order.status}). Contact support before
+                    advancing it.
+                  </p>
+                )}
                 <p className="mt-2.5 font-body text-xs text-slate-400">
-                  Stages move in order. The customer is emailed on every change.
+                  {proofMissing
+                    ? 'Record who received the parcel before closing the delivery.'
+                    : 'Stages move in order. The customer is emailed on every change.'}
                 </p>
+              </>
+            )}
+          </Panel>
+
+          <Panel title="Payment">
+            {paid ? (
+              <p className="font-body text-sm text-slate-500">
+                {order.payment_method === 'cash'
+                  ? 'Paid in cash and confirmed by an admin. Nothing to collect.'
+                  : 'Paid by M-Pesa. Nothing to collect.'}
+              </p>
+            ) : cancelled ? (
+              <p className="font-body text-sm text-slate-500">
+                This delivery was cancelled. There is nothing to collect.
+              </p>
+            ) : cashPending ? (
+              <p className="rounded-xl bg-amber-100 px-3.5 py-2.5 font-body text-sm text-amber-700">
+                Reported. Call the admin team to confirm it, then the customer gets their receipt.
+              </p>
+            ) : (
+              <>
+                <p className="font-body text-sm text-slate-500">
+                  If the M-Pesa prompt never reached the customer, take {money(order.price_kes)}{' '}
+                  directly and report it here. An admin confirms it before the order is closed.
+                </p>
+                <Button
+                  fullWidth
+                  variant="dark"
+                  size="lg"
+                  className="mt-3.5"
+                  loading={saving}
+                  onClick={reportCash}
+                >
+                  Customer paid me in cash
+                </Button>
               </>
             )}
           </Panel>
@@ -258,9 +341,7 @@ export default function CourierOrderDetail() {
                   >
                     {live.sharing ? 'Stop sharing' : 'Start live tracking'}
                   </Button>
-                  {live.error && (
-                    <p className="font-body text-xs text-rose-700">{live.error}</p>
-                  )}
+                  {live.error && <p className="font-body text-xs text-rose-700">{live.error}</p>}
                 </div>
 
                 <Button
@@ -309,7 +390,10 @@ export default function CourierOrderDetail() {
 
           <Panel title="Parcel">
             <dl className="flex flex-col gap-2.5">
-              <Fact label="Parcel band" value={`${order.price_breakdown?.category_label} · up to ${order.weight_kg} kg`} />
+              <Fact
+                label="Parcel band"
+                value={`${order.price_breakdown?.category_label} · up to ${order.weight_kg} kg`}
+              />
               <Fact label="Booked" value={fullDate(order.created_at)} />
               <Fact label="Sender" value={order.customer?.name} />
             </dl>

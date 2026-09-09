@@ -15,6 +15,7 @@ import { PageContainer } from '@/components/layout/AppShell'
 import { PageSpinner } from '@/components/ui/Spinner'
 import {
   assignCourier,
+  confirmPayment,
   fetchAdminOrder,
   fetchCouriers,
   selectAdminDetailError,
@@ -22,13 +23,13 @@ import {
   selectAdminOrder,
   selectAdminSaveError,
   selectAdminSaving,
+  rejectPayment,
   selectCouriersList,
   setOrderLocation,
   setOrderStatus,
 } from '@/features/admin/adminSlice'
 import { STATUS_META } from '@/utils/constants'
 import { distance, duration, fullDate, money } from '@/utils/formatters'
-import { useLivePoll } from '@/hooks/useLivePoll'
 import { useToast } from '@/hooks/useToast'
 
 const STATUS_OPTIONS = Object.entries(STATUS_META).map(([value, meta]) => ({
@@ -58,11 +59,6 @@ export default function AdminOrderDetail() {
     dispatch(fetchAdminOrder(id))
     dispatch(fetchCouriers())
   }, [dispatch, id])
-
-  useLivePoll(() => {
-    dispatch(fetchAdminOrder(id))
-    dispatch(fetchCouriers())
-  })
 
   const orderId = order?.id ?? null
   const serverCourierId = order?.courier?.id ?? null
@@ -105,6 +101,20 @@ export default function AdminOrderDetail() {
     if (assignCourier.fulfilled.match(result)) {
       toast.success('Courier assigned and notified')
       dispatch(fetchCouriers())
+    }
+  }
+
+  const handleConfirmPayment = async () => {
+    const result = await dispatch(confirmPayment(order.id))
+    if (confirmPayment.fulfilled.match(result)) {
+      toast.success('Payment confirmed and receipt sent')
+    }
+  }
+
+  const handleRejectPayment = async () => {
+    const result = await dispatch(rejectPayment(order.id))
+    if (rejectPayment.fulfilled.match(result)) {
+      toast.success('Cash payment turned down')
     }
   }
 
@@ -246,6 +256,50 @@ export default function AdminOrderDetail() {
               <p className="mt-2.5 font-body text-sm text-slate-500">
                 Currently with {order.courier.name} · {order.courier.phone}
               </p>
+            )}
+          </Panel>
+
+          <Panel title="Payment">
+            {order.payment_status === 'paid' ? (
+              <p className="font-body text-sm text-slate-500">
+                {order.payment_method === 'cash'
+                  ? 'Settled in cash and confirmed. The customer has their receipt.'
+                  : 'Settled by M-Pesa. The customer has their receipt.'}
+              </p>
+            ) : (
+              <>
+                {order.payment_status === 'cash_pending' ? (
+                  <p className="rounded-xl bg-amber-100 px-3.5 py-2.5 font-body text-sm text-amber-800">
+                    {order.courier?.name ?? 'The rider'} reports collecting {money(order.price_kes)}{' '}
+                    in cash. Confirm only once you have spoken to them.
+                  </p>
+                ) : (
+                  <p className="font-body text-sm text-slate-500">
+                    Use this when the M-Pesa prompt never reached the customer and the rider took{' '}
+                    {money(order.price_kes)} directly. Confirming settles the order and emails the
+                    receipt.
+                  </p>
+                )}
+                <Button
+                  fullWidth
+                  className="mt-3.5"
+                  loading={saving}
+                  onClick={handleConfirmPayment}
+                >
+                  Confirm payment of {money(order.price_kes)}
+                </Button>
+                {order.payment_status === 'cash_pending' && (
+                  <Button
+                    fullWidth
+                    variant="outline"
+                    className="mt-2.5"
+                    loading={saving}
+                    onClick={handleRejectPayment}
+                  >
+                    Turn it down
+                  </Button>
+                )}
+              </>
             )}
           </Panel>
 

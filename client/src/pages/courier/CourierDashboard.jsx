@@ -2,6 +2,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { useEffect } from 'react'
 
 import Button from '@/components/ui/Button'
+import EarningsPanel from '@/components/courier/EarningsPanel'
 import EmptyState from '@/components/ui/EmptyState'
 import ErrorMessage from '@/components/ui/ErrorMessage'
 import OrderCard from '@/components/orders/OrderCard'
@@ -28,7 +29,6 @@ import { STATUS_META } from '@/utils/constants'
 import { distance } from '@/utils/formatters'
 import { restoreSession } from '@/features/auth/authSlice'
 import { useAuth } from '@/hooks/useAuth'
-import { useLivePoll } from '@/hooks/useLivePoll'
 import { useToast } from '@/hooks/useToast'
 
 const STATUS_OPTIONS = [
@@ -57,17 +57,6 @@ export default function CourierDashboard() {
   useEffect(() => {
     dispatch(hydrateAvailability(user?.is_available))
   }, [dispatch, user?.is_available])
-
-  useLivePoll(() => {
-    dispatch(fetchCourierStats())
-    dispatch(
-      fetchAssignments({
-        page: filters.page,
-        per_page: 6,
-        status: filters.status || undefined,
-      }),
-    )
-  })
 
   const toggleAvailability = async () => {
     const next = !isAvailable
@@ -116,6 +105,8 @@ export default function CourierDashboard() {
           caption="delivered distance"
         />
       </div>
+
+      <EarningsPanel stats={stats} />
 
       <div className="mt-6 flex justify-end">
         <Select

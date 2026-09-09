@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 
+import Logo from '@/components/layout/Logo'
 import { PUBLIC_NAV } from '@/utils/constants'
 
 //Initialised properties to be used in the Footer component
@@ -18,8 +19,8 @@ const COLUMNS = [
 ]
 
 const LEGAL = [
-  { to: '/services', label: 'Terms of service' },
-  { to: '/services', label: 'Privacy policy' },
+  { to: '/terms', label: 'Terms of service' },
+  { to: '/privacy', label: 'Privacy policy' },
   { to: '/about', label: 'Contact us' },
 ]
 
@@ -32,14 +33,7 @@ export default function Footer() {
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           <div className="lg:col-span-2">
             <Link to="/" className="flex items-center gap-2.5">
-              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-brand-400">
-                <svg viewBox="0 0 32 32" className="h-4 w-4" fill="none" aria-hidden="true">
-                  <path d="M8 21 14 9l4 7.5L20 13l4 8z" fill="#3f2103" />
-                </svg>
-              </span>
-              <span className="font-display text-base font-bold tracking-tight text-slate-950">
-                Deliveroo
-              </span>
+              <Logo size="sm" />
             </Link>
             <p className="mt-3.5 max-w-prose font-body text-sm text-slate-500">
               Parcel delivery management for Nairobi. Quote it, track it, pay for it — without the

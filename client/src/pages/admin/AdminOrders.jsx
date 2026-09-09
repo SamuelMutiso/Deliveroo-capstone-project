@@ -23,7 +23,6 @@ import {
   setAdminOrderFilters,
 } from '@/features/admin/adminSlice'
 import { STATUS_META } from '@/utils/constants'
-import { useLivePoll } from '@/hooks/useLivePoll'
 import { useDebounce } from '@/hooks/useDebounce'
 
 const STATUS_OPTIONS = [
@@ -79,18 +78,6 @@ export default function AdminOrders() {
       }),
     )
   }, [dispatch, filters, hydrated])
-
-  useLivePoll(() =>
-    dispatch(
-      fetchAdminOrders({
-        page: filters.page,
-        per_page: 10,
-        status: filters.status || undefined,
-        courier_id: filters.courier_id || undefined,
-        search: filters.search || undefined,
-      }),
-    ),
-  )
 
   const courierOptions = [
     { value: '', label: 'Any courier' },
